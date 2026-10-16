@@ -1,0 +1,71 @@
+:root {
+    --color-primary: #2f5d8a;
+    --color-text: #1f2328;
+    --color-background: #ffffff;
+    --color-surface: #f5f7f9;
+    --color-border: #d8dee4;
+    --font-body: Arial, sans-serif;
+    --space-3: 0.75rem;
+    --space-4: 1rem;
+    --space-6: 1.5rem;
+    --radius-md: 8px;
+}
+
+body {
+    margin: 0;
+    font-family: var(--font-body);
+    color: var(--color-text);
+    background: var(--color-background);
+}
+
+.container {
+    max-width: 700px;
+    margin: 60px auto;
+    padding: var(--space-6);
+}
+
+form {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-3);
+    padding: var(--space-6);
+    background: var(--color-surface);
+    border-radius: var(--radius-md);
+}
+
+textarea {
+    padding: var(--space-4);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-md);
+    font: inherit;
+    resize: vertical;
+}
+
+textarea:focus {
+    outline: 2px solid var(--color-primary);
+}
+
+button {
+    padding: var(--space-3);
+    background: var(--color-primary);
+    color: white;
+    border: none;
+    border-radius: var(--radius-md);
+    font: inherit;
+}
+
+button:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+.note {
+    font-size: 0.875rem;
+}
+
+@media (max-width: 600px) {
+    .container {
+        margin: 20px auto;
+        padding: var(--space-4);
+    }
+}
