@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Submit Resume</title>
+    <link rel="stylesheet" href="../static/style.css">
+</head>
+<body>
+    <main class="container">
+        <h1>Resume Reviewer</h1>
+        <p>Paste your resume below to get feedback.</p>
+
+        <form>
+            <label for="resume">Your Resume</label>
+            <textarea
+                id="resume"
+                name="resume"
+                rows="12"
+                placeholder="Paste your resume here..."
+                required
+            ></textarea>
+
+            <button type="button" disabled>Submit Resume</button>
+            <p class="note">Resume submission will be available once the backend is connected.</p>
+        </form>
+    </main>
+</body>
+</html>
