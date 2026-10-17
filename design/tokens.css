@@ -1,0 +1,58 @@
+/*
+ * Design tokens for the resume reviewer.
+ *
+ * These CSS variables are the single source of truth for colors, typography
+ * and spacing. Pages and components should use these variables instead
+ * of hard-coded values, so the visual style stays consistent and can be
+ * changed in one place.
+ *
+ * Usage:
+ *   <link rel="stylesheet" href="tokens.css">
+ *   .card { padding: var(--space-4); color: var(--color-text); }
+ */
+
+:root {
+  /* ---------- Colors ---------- */
+  --color-primary: #2f5d8a;        /* buttons, links, highlights */
+  --color-primary-hover: #244a6e;
+  --color-accent: #e0a458;         /* small accents */
+  --color-text: #1f2328;           /* main body text */
+  --color-text-muted: #5f6b76;     /* secondary text, dates, labels */
+  --color-background: #ffffff;     /* page background */
+  --color-surface: #f5f7f9;        /* cards, form panels */
+  --color-border: #d8dee4;
+  --color-error: #c0392b;
+  --color-success: #2e7d4f;
+
+  /* ---------- Form inputs (resume text areas, comment boxes) ---------- */
+  --color-input-background: #ffffff;  /* inside text inputs and text areas */
+  --color-input-border: #8c959f;      /* default input outline */
+  --color-focus-border: #2f5d8a;      /* input outline while typing in it */
+  --focus-ring: 0 0 0 3px rgba(47, 93, 138, 0.25); /* soft glow around a focused input */
+
+  /* ---------- Typography ---------- */
+  --font-heading: "Georgia", "Times New Roman", serif;
+  --font-body: "Helvetica Neue", Arial, sans-serif;
+
+  --text-xs: 0.75rem;   /* 12px */
+  --text-sm: 0.875rem;  /* 14px */
+  --text-md: 1rem;      /* 16px, base size */
+  --text-lg: 1.25rem;   /* 20px */
+  --text-xl: 1.5rem;    /* 24px */
+  --text-2xl: 2rem;     /* 32px, page titles */
+
+  --line-height-tight: 1.2;
+  --line-height-normal: 1.5;
+
+  /* ---------- Spacing (4px scale) ---------- */
+  --space-1: 0.25rem;  /* 4px */
+  --space-2: 0.5rem;   /* 8px */
+  --space-3: 0.75rem;  /* 12px */
+  --space-4: 1rem;     /* 16px */
+  --space-6: 1.5rem;   /* 24px */
+  --space-8: 2rem;     /* 32px */
+
+  /* ---------- Shape ---------- */
+  --radius-sm: 4px;
+  --radius-md: 8px;
+}
