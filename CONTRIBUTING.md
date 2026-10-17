@@ -18,8 +18,11 @@ This document describes how our team works together in this repository. Please r
 3. Add docstrings and/or tests where applicable.
 4. Request a review from at least **one** teammate.
 5. Don't merge your own PR until it has at least one approval.
-6. Address every review comment before merging, whether it came from a person or an automated tool. Either make the change, or reply explaining why you're keeping it as it is.
-7. Use **Squash and merge** to keep the history of `main` clean.
+6. If you push new changes after your PR was approved, request a review again. An approval only covers the code that was reviewed, so the latest version must be approved before merging. (Small fixes like typos are the only exception, and should be mentioned in a comment.)
+7. Address every review comment before merging, whether it came from a person or an automated tool. Either make the change, or reply explaining why you're keeping it as it is.
+8. Use **Squash and merge** to keep the history of `main` clean.
+
+Branch protection on `main` enforces rules 5 and 6: merging requires one approval, and approvals are automatically dismissed when new commits are pushed.
 
 ## Reviewing
 
