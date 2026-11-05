@@ -11,6 +11,7 @@
         <h1>Resume Reviewer</h1>
         <p>Paste your resume below to get feedback.</p>
 
+        <!-- Keep the label and input together so the form has an accessible name for its field. -->
         <form>
             <label for="resume">Your Resume</label>
             <textarea
@@ -21,6 +22,7 @@
                 required
             ></textarea>
 
+            <!-- Keep submission disabled until a backend can handle the resume. -->
             <button type="button" disabled>Submit Resume</button>
             <p class="note">Resume submission will be available once the backend is connected.</p>
         </form>
