@@ -63,6 +63,102 @@ button:disabled {
     font-size: 0.875rem;
 }
 
+/* Review page sections reuse the shared container, form, and design variables. */
+.resume-review {
+    max-width: 1100px;
+    line-height: 1.5;
+}
+
+.resume-review section {
+    min-width: 0;
+}
+
+.resume-review .back-link {
+    color: var(--color-primary);
+    text-underline-offset: 0.2em;
+}
+
+.resume-review .back-link:focus-visible {
+    outline: 2px solid var(--color-primary);
+    outline-offset: 3px;
+}
+
+.resume-review section + section {
+    margin-top: var(--space-6);
+}
+
+/* Preserve pasted line breaks and wrap long text within narrow screens. */
+.resume-review .resume-text,
+.resume-review .comment-text {
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+    padding: var(--space-4);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-md);
+}
+
+/* Give plain resume text the spacing and surface of a document. */
+.resume-review .resume-text {
+    padding: var(--space-6);
+    background: var(--color-background);
+    line-height: 1.7;
+    box-shadow: 0 2px 6px var(--color-border);
+}
+
+.resume-review .comment-text {
+    background: var(--color-surface);
+}
+
+.resume-review .comment-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-3);
+}
+
+/* Keep the editable field inside its form, including on mobile screens. */
+.resume-review textarea {
+    box-sizing: border-box;
+    width: 100%;
+    min-width: 0;
+}
+
+.resume-review form .note {
+    margin: 0;
+}
+
+/* Keep reading order on small screens; place feedback beside the document on desktop. */
+@media (min-width: 900px) {
+    .resume-review {
+        display: grid;
+        grid-template-columns: minmax(0, 3fr) minmax(0, 2fr);
+        grid-template-rows: auto auto 1fr;
+        gap: var(--space-6);
+        align-items: start;
+    }
+
+    .resume-review .review-header {
+        grid-column: 1 / -1;
+    }
+
+    .resume-review .review-header h1 {
+        margin-bottom: 0;
+    }
+
+    .resume-review .resume-section {
+        grid-column: 1;
+        grid-row: 2 / 4;
+    }
+
+    .resume-review .comments-section,
+    .resume-review .comment-form-section {
+        grid-column: 2;
+        margin-top: 0;
+    }
+}
+
 @media (max-width: 600px) {
     .container {
         margin: 20px auto;

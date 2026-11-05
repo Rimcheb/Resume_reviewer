@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Review Resume | Resume Reviewer</title>
+    <link rel="stylesheet" href="../static/style.css">
+</head>
+<body>
+    <main class="container resume-review">
+        <header class="review-header">
+            <a class="back-link" href="/submit">Back to Submit Resume</a>
+            <h1>Review Resume</h1>
+        </header>
+
+        {# Flask context: resume = {"content": "resume text"} or None;
+           comments = [{"content": "feedback text"}] or []. Both may be omitted. #}
+        <section class="resume-section" aria-labelledby="resume-heading">
+            <h2 id="resume-heading">Resume</h2>
+            {% if resume is defined and resume and resume.content is defined and resume.content %}
+            <!-- Escape user text; CSS preserves its line breaks without rendering HTML. -->
+            <div class="resume-text">{{ resume.content | e }}</div>
+            {% else %}
+            <p class="note">No resume is available to review yet.</p>
+            {% endif %}
+        </section>
+
+        <!-- Existing feedback follows the resume in reading order. -->
+        <section class="comments-section" aria-labelledby="comments-heading">
+            <h2 id="comments-heading">Comments</h2>
+            <ul class="comment-list">
+                {% for comment in comments | default([], true) %}
+                <li class="comment-text">{{ comment.content | e }}</li>
+                {% else %}
+                <li class="note">No comments yet.</li>
+                {% endfor %}
+            </ul>
+        </section>
+
+        <!-- Posting stays disabled until a backend submission handler is connected. -->
+        <section class="comment-form-section" aria-labelledby="write-comment-heading">
+            <h2 id="write-comment-heading">Write a comment</h2>
+            <form>
+                <label for="comment">Your feedback</label>
+                <p id="comment-instructions" class="note">Give specific feedback: identify a section and suggest a concrete improvement.</p>
+                <textarea
+                    id="comment"
+                    name="comment"
+                    rows="6"
+                    aria-describedby="comment-instructions posting-status"
+                    placeholder="For example, add a measurable result to your most recent role."
+                ></textarea>
+                <button type="button" disabled aria-describedby="posting-status">Post Comment</button>
+                <p id="posting-status" class="note">Comment posting will be available once the backend is connected. Drafts are not saved.</p>
+            </form>
+        </section>
+    </main>
+</body>
+</html>
