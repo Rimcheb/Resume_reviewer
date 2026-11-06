@@ -12,6 +12,7 @@
         <h1>Resume Reviewer</h1>
         {% if g.user %}
         <nav aria-label="Main navigation">
+            <a href="{{ url_for('resumes.new') }}">Submit a resume</a> |
             <a href="{{ url_for('auth.account') }}">Your account</a>
         </nav>
         {% endif %}

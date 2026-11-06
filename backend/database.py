@@ -1,9 +1,4 @@
-"""Expose user storage operations through the application's chosen backend.
-
-User records contain id, email and password_hash. Missing lookups return None.
-create_user returns None only for a duplicate email; other failures raise.
-"""
-
+"""Forward storage operations through the selected backend."""
 from flask import current_app
 
 
@@ -27,3 +22,15 @@ def get_user_by_id(user_id):
 def create_user(email, password_hash):
     """Save a normalized email and password hash, or return None if duplicate."""
     return current_app.extensions["storage"].create_user(email, password_hash)
+
+
+def create_resume(user_id, content, target_field, feedback_request):
+    """Save validated submission fields and return a plain resume record."""
+    return current_app.extensions["storage"].create_resume(
+        user_id, content, target_field, feedback_request
+    )
+
+
+def get_resume_by_id(resume_id):
+    """Return a resume record, or None when it does not exist."""
+    return current_app.extensions["storage"].get_resume_by_id(resume_id)
