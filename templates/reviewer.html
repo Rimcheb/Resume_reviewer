@@ -1,0 +1,15 @@
+{% extends "base.html" %}
+{% block title %}Member {{ user_id }} feedback | Resume Reviewer{% endblock %}
+{% block content %}
+<h2>Member {{ user_id }} feedback</h2>
+{% if reputation.total %}
+<p>{{ reputation.helpful }} of {{ reputation.total }} rated comments marked helpful
+    ({{ reputation.percentage }}%).</p>
+{% else %}
+<p>Not rated yet.</p>
+{% endif %}
+<p>Only the resume owner can rate another member's feedback.
+    The percentage is helpful ratings divided by all ratings, rounded to a whole number.
+    Unrated comments and self-comments do not count.</p>
+<p><a href="{{ url_for('resumes.feed') }}">Browse resumes</a></p>
+{% endblock %}

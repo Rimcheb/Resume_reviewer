@@ -327,3 +327,15 @@ def list_ratings(resume_id):
     for rating in get_db().scalars(query):
         ratings[rating.comment_id] = rating.helpful
     return ratings
+
+
+def get_reputation(user_id):
+    """Derive counts in SQL so changes and deletions cannot leave stale totals."""
+    query = eligible_ratings().where(Comment.author_id == user_id)
+    query = query.with_only_columns(func.sum(CommentRating.helpful), func.count(CommentRating.id))
+    helpful, total = get_db().execute(query).one()
+    helpful = helpful or 0
+    percentage = None
+    if total:
+        percentage = round(100 * helpful / total)
+    return {"helpful": helpful, "total": total, "percentage": percentage}
