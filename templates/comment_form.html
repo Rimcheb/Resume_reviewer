@@ -1,0 +1,16 @@
+{% extends "base.html" %}
+{% block title %}Comment | Resume Reviewer{% endblock %}
+{% block content %}
+<h2>{{ "Edit your comment" if comment else "Your comment" }}</h2>
+<p>Feedback on <a href="{{ url_for('resumes.detail', resume_id=resume.id) }}">{{ resume.target_field or "Resume" }}</a></p>
+<p>Identify the passage or problem, explain why it matters, and suggest a concrete improvement.
+    Questions and owner follow-ups are welcome.</p>
+{% if error %}<p role="alert">{{ error }}</p>{% endif %}
+<form method="post" action="{{ url_for('comments.edit', comment_id=comment.id) if comment else url_for('comments.create', resume_id=resume.id) }}">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <label for="comment">Your comment</label>
+    <textarea id="comment" name="comment" rows="5" maxlength="{{ comment_limit }}" required>{{ content }}</textarea>
+    <p class="note">Up to {{ comment_limit }} characters. All authenticated members can read comments.</p>
+    <button type="submit">{{ "Save changes" if comment else "Post comment" }}</button>
+</form>
+{% endblock %}
