@@ -90,3 +90,18 @@ def upgrade_db_command(backup):
         click.echo(f"Database upgraded. Original data backed up to {backup}.")
     else:
         click.echo("Database is already up to date. Nothing was changed.")
+
+
+@click.command("backup-db")
+@click.option("--backup", required=True, type=click.Path(dir_okay=False, path_type=Path))
+@with_appcontext
+def backup_db_command(backup):
+    """Make a consistent SQLite snapshot in a new file without changing the source."""
+    if not Path(current_app.config["DATABASE"]).is_file():
+        raise click.ClickException("Database does not exist.")
+    try:
+        with current_app.extensions["database_engine"].connect() as connection:
+            backup_database(connection, backup)
+    except (OSError, sqlite3.Error, SQLAlchemyError) as error:
+        raise click.ClickException("Backup failed. Use a new path in an existing writable folder.") from error
+    click.echo(f"Database backed up to {backup}.")

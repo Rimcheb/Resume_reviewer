@@ -94,3 +94,8 @@ def list_ratings(resume_id):
 def get_reputation(user_id):
     """Return helpful, total and percentage; an unrated percentage is None."""
     return current_app.extensions["storage"].get_reputation(user_id)
+
+
+def is_ready():
+    """Return whether the selected storage is available and has the current schema."""
+    return current_app.extensions["storage"].is_ready()
