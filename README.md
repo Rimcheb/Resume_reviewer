@@ -1,12 +1,14 @@
-# Run the Flask foundation
+# Run Resume Reviewer
 
-Use Python 3.12. From the project folder:
+Use Python 3.12. Run commands from the project folder.
 
 Windows PowerShell:
 
 ```powershell
 python -m venv .venv
 .venv\Scripts\python.exe -m pip install -r requirements.txt
+$env:SECRET_KEY = .venv\Scripts\python.exe -c "import secrets; print(secrets.token_hex(32))"
+$env:COOKIE_SECURE = "false"
 .venv\Scripts\python.exe -m flask --app app init-db
 .venv\Scripts\python.exe -m flask --app app run --port 5001
 ```
@@ -16,29 +18,18 @@ macOS/Linux:
 ```bash
 python3 -m venv .venv
 .venv/bin/python -m pip install -r requirements.txt
+export SECRET_KEY=$(.venv/bin/python -c "import secrets; print(secrets.token_hex(32))")
+export COOKIE_SECURE=false
 .venv/bin/python -m flask --app app init-db
 .venv/bin/python -m flask --app app run --port 5001
 ```
 
-Open http://127.0.0.1:5001/health. It returns `{"status":"ok"}` with HTTP 200.
-This foundation exposes only the health endpoint; account and resume routes arrive
-in the backend feature changes. The root URL returns 404 at this stage.
+Run init-db only for a new database. It refuses existing tables. Keep existing data.
+The default file is instance/resume_reviewer.sqlite. To use another file, set
+DATABASE_PATH to an absolute filename before initialization and startup. Use the
+same path when restarting. Set environment variables in every new terminal.
+COOKIE_SECURE=false is for local HTTP; use true and a stable private SECRET_KEY
+for HTTPS hosting. Never commit secrets or database files.
 
-Run `init-db` only for a new database. It creates the users, resumes and comments
-tables and refuses to initialize a file that already contains tables.
-If your database already has these tables, skip initialization.
-
-The default database is `instance/resume_reviewer.sqlite`. For another location,
-set `DATABASE_PATH` before running initialization or starting the server:
-
-```powershell
-$env:DATABASE_PATH = "C:/absolute/path/to/resume_reviewer.sqlite"
-```
-
-```bash
-export DATABASE_PATH=/absolute/path/to/resume_reviewer.sqlite
-```
-
-Use the same path when restarting so the app opens the same saved records.
-
-If port 5001 is already in use, choose another port and use it in the URL too.
+Open http://127.0.0.1:5001 and register, then log in. /health returns server status.
+If port 5001 is occupied, choose another port and update the URL.

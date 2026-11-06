@@ -1,0 +1,17 @@
+{% extends "base.html" %}
+{% block title %}Create account | Resume Reviewer{% endblock %}
+{% block content %}
+<h2>Create an account</h2>
+{% if error %}<p role="alert">{{ error }}</p>{% endif %}
+<form method="post" action="{{ url_for('auth.register') }}">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <label for="email">Email</label>
+    <input id="email" name="email" type="email" maxlength="254"
+           autocomplete="email" value="{{ email }}" required>
+    <label for="password">Password (8 to 128 characters)</label>
+    <input id="password" name="password" type="password" minlength="8"
+           maxlength="128" autocomplete="new-password" required>
+    <button type="submit">Create account</button>
+</form>
+<p><a href="{{ url_for('auth.login') }}">Log in to an existing account</a></p>
+{% endblock %}

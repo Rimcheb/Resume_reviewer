@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Resume Reviewer{% endblock %}</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='auth.css') }}">
+</head>
+<body>
+    <main class="container{% block page_class %}{% endblock %}">
+        <h1>Resume Reviewer</h1>
+        {% if g.user %}
+        <nav aria-label="Main navigation">
+            <a href="{{ url_for('auth.account') }}">Your account</a>
+        </nav>
+        {% endif %}
+        {% for message in get_flashed_messages() %}
+        <p role="status">{{ message }}</p>
+        {% endfor %}
+        {% block content %}{% endblock %}
+    </main>
+</body>
+</html>

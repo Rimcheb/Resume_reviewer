@@ -1,0 +1,7 @@
+input:not([type="hidden"]) {
+    padding: var(--space-3);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-md);
+    font: inherit;
+    min-width: 0;
+}
