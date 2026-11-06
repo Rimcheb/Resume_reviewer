@@ -4,6 +4,7 @@ from flask import Blueprint, abort, flash, g, redirect, render_template, request
 
 from backend import database
 from backend.auth import login_required
+from backend.comments import COMMENT_LIMIT
 
 bp = Blueprint("resumes", __name__)
 
@@ -64,10 +65,10 @@ def detail(resume_id):
     resume = database.get_resume_by_id(resume_id)
     if resume is None:
         abort(404)
-    comments = []
+    comments = database.list_comments(resume_id)
     return render_template("view_resume.html", resume=resume, comments=comments,
                            ratings={},
-                           comment_limit=0)
+                           comment_limit=COMMENT_LIMIT)
 
 
 def resume_list(user_id=None):
