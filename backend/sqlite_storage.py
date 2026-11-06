@@ -3,7 +3,7 @@ from pathlib import Path
 import click
 from flask import current_app, g
 from flask.cli import with_appcontext
-from sqlalchemy import create_engine, event, inspect, select
+from sqlalchemy import create_engine, event, inspect, select, func
 from sqlalchemy.engine import URL
 from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 from sqlalchemy.orm import Session
@@ -16,6 +16,8 @@ def configure_connection(connection, connection_record):
     """Let SQLAlchemy start transactions and enforce SQLite foreign keys."""
     connection.isolation_level = None
     connection.execute("PRAGMA foreign_keys = ON")
+    # Use the same lowercase rules as other storage implementations.
+    connection.create_function("lowercase", 1, str.lower)
 
 
 def begin_transaction(connection):
@@ -153,3 +155,20 @@ def get_resume_by_id(resume_id):
         return None
     resume, has_peer_feedback = row
     return resume_data(resume, has_peer_feedback)
+
+
+def list_resumes(user_id=None, target_field="", limit=10, offset=0):
+    """Filter, order, and limit rows in SQL before copying the returned records."""
+    query = resume_query()
+    if user_id is not None:
+        query = query.where(Resume.user_id == user_id)
+    if target_field:
+        field = func.lowercase(Resume.target_field)
+        # instr finds literal text, including % and _, and returns 0 if absent.
+        query = query.where(func.instr(field, target_field.lower()) > 0)
+    query = query.order_by(Resume.created_at.desc(), Resume.id.desc())
+    rows = get_db().execute(query.limit(limit).offset(offset)).all()
+    records = []
+    for resume, has_peer_feedback in rows:
+        records.append(resume_data(resume, has_peer_feedback))
+    return records
