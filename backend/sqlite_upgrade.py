@@ -9,9 +9,9 @@ from flask.cli import with_appcontext
 from sqlalchemy import inspect
 from sqlalchemy.exc import SQLAlchemyError
 
-from backend.models import Comment, Resume
+from backend.models import Comment, CommentRating, Resume
 
-SCHEMA_VERSION = 1
+SCHEMA_VERSION = 2
 
 
 def backup_database(connection, backup_path):
@@ -54,7 +54,7 @@ def upgrade_db(backup_path):
         columns = [column["name"] for column in inspector.get_columns("resumes")]
         indexes = missing_indexes(connection)
         if ("target_field" in columns and "feedback_request" in columns and not indexes
-                and version == SCHEMA_VERSION):
+                and "comment_ratings" in tables and version == SCHEMA_VERSION):
             return False
 
         backup_database(connection, backup_path)
@@ -70,6 +70,7 @@ def upgrade_db(backup_path):
             )
         for index in indexes:
             index.create(connection)
+        CommentRating.__table__.create(connection, checkfirst=True)
         connection.exec_driver_sql(f"PRAGMA user_version = {SCHEMA_VERSION}")
     return True
 

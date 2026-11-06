@@ -9,6 +9,8 @@ from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 from sqlalchemy.orm import Session
 from sqlalchemy.pool import NullPool
 from backend.models import Base, Comment, Resume, User
+from sqlalchemy.dialects.sqlite import insert
+from backend.models import CommentRating
 from backend.sqlite_upgrade import SCHEMA_VERSION, upgrade_db_command
 
 
@@ -238,6 +240,8 @@ def delete_resume(resume_id):
     if resume is None:
         return False
     try:
+        comment_ids = select(Comment.id).where(Comment.resume_id == resume_id)
+        db.execute(delete(CommentRating).where(CommentRating.comment_id.in_(comment_ids)))
         db.execute(delete(Comment).where(Comment.resume_id == resume_id))
         db.delete(resume)
         db.commit()
@@ -269,9 +273,57 @@ def delete_comment(comment_id):
     if comment is None:
         return False
     try:
+        db.execute(delete(CommentRating).where(CommentRating.comment_id == comment_id))
         db.delete(comment)
         db.commit()
     except SQLAlchemyError:
         db.rollback()
         raise
     return True
+
+
+def save_rating(comment_id, rater_id, helpful):
+    """Use the unique key to insert or update one rating in a single statement."""
+    db = get_db()
+    statement = insert(CommentRating).values(
+        comment_id=comment_id, rater_id=rater_id, helpful=helpful
+    )
+    statement = statement.on_conflict_do_update(
+        index_elements=["comment_id", "rater_id"], set_={"helpful": helpful}
+    )
+    try:
+        db.execute(statement)
+        db.commit()
+    except SQLAlchemyError:
+        db.rollback()
+        raise
+
+
+def delete_rating(comment_id, rater_id):
+    """Delete only the authorized owner's rating, in one transaction."""
+    db = get_db()
+    try:
+        db.execute(delete(CommentRating).where(
+            CommentRating.comment_id == comment_id, CommentRating.rater_id == rater_id
+        ))
+        db.commit()
+    except SQLAlchemyError:
+        db.rollback()
+        raise
+
+
+def eligible_ratings():
+    """Exclude ratings by non-owners and ratings on self-comments."""
+    return select(CommentRating).join(Comment).join(Resume).where(
+        CommentRating.rater_id == Resume.user_id,
+        Comment.author_id != Resume.user_id,
+    )
+
+
+def list_ratings(resume_id):
+    """Read valid ratings for this discussion without loading account details."""
+    query = eligible_ratings().where(Resume.id == resume_id)
+    ratings = {}
+    for rating in get_db().scalars(query):
+        ratings[rating.comment_id] = rating.helpful
+    return ratings
