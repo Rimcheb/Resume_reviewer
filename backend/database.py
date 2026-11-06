@@ -74,3 +74,18 @@ def update_comment(comment_id, content):
 def delete_comment(comment_id):
     """After an authorship check, delete a comment; return False if missing."""
     return current_app.extensions["storage"].delete_comment(comment_id)
+
+
+def save_rating(comment_id, rater_id, helpful):
+    """Save 0 or 1 after permission checks; replace this owner's previous rating."""
+    return current_app.extensions["storage"].save_rating(comment_id, rater_id, helpful)
+
+
+def delete_rating(comment_id, rater_id):
+    """Remove this owner's rating after permission checks; absence is harmless."""
+    return current_app.extensions["storage"].delete_rating(comment_id, rater_id)
+
+
+def list_ratings(resume_id):
+    """Return eligible owner ratings as a dictionary of comment ID to 0 or 1."""
+    return current_app.extensions["storage"].list_ratings(resume_id)

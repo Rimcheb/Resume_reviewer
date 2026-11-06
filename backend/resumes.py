@@ -68,7 +68,7 @@ def detail(resume_id):
         abort(404)
     comments = database.list_comments(resume_id)
     return render_template("view_resume.html", resume=resume, comments=comments,
-                           ratings={},
+                           ratings=database.list_ratings(resume_id),
                            comment_limit=COMMENT_LIMIT)
 
 
