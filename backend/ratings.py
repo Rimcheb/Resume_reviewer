@@ -46,3 +46,13 @@ def delete(comment_id):
     flash("Feedback rating removed.")
     return redirect(url_for("resumes.detail", resume_id=comment["resume_id"],
                             _anchor=f"comment-{comment_id}"), code=303)
+
+
+@bp.get("/reviewers/<int:user_id>")
+@login_required
+def reviewer(user_id):
+    """Show only the member ID and derived helpfulness, never their email or hash."""
+    if database.get_user_by_id(user_id) is None:
+        abort(404)
+    return render_template("reviewer.html", user_id=user_id,
+                           reputation=database.get_reputation(user_id))
