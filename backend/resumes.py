@@ -68,3 +68,39 @@ def detail(resume_id):
     return render_template("view_resume.html", resume=resume, comments=comments,
                            ratings={},
                            comment_limit=0)
+
+
+def resume_list(user_id=None):
+    """Build either feed using a bounded page and an optional literal field filter."""
+    try:
+        page = int(request.args.get("page", "1"))
+    except ValueError:
+        abort(400)
+    if page < 1 or page > MAX_PAGE:
+        abort(400)
+    target_field = request.args.get("field", "").strip()
+    if len(target_field) > FIELD_LIMIT:
+        abort(400)
+    # One extra row tells us whether a next page exists without counting all rows.
+    records = database.list_resumes(user_id, target_field, PAGE_SIZE + 1, (page - 1) * PAGE_SIZE)
+    if page > 1 and not records:
+        abort(404)
+    return render_template(
+        "resume_list.html", resumes=records[:PAGE_SIZE], has_next=len(records) > PAGE_SIZE,
+        page=page, target_field=target_field, is_mine=user_id is not None,
+        endpoint=request.endpoint, field_limit=FIELD_LIMIT,
+    )
+
+
+@bp.get("/resumes")
+@login_required
+def feed():
+    """Show community submissions to signed-in members."""
+    return resume_list()
+
+
+@bp.get("/my-resumes")
+@login_required
+def mine():
+    """Show only submissions owned by the signed-in user."""
+    return resume_list(g.user["id"])
