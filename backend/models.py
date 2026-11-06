@@ -1,6 +1,6 @@
 """Define the tables and constraints used for new databases and ORM queries."""
 
-from sqlalchemy import CheckConstraint, Column, ForeignKey, Index, Integer, Text, func
+from sqlalchemy import CheckConstraint, Column, ForeignKey, Index, Integer, Text, UniqueConstraint, func
 from sqlalchemy.orm import declarative_base
 
 Base = declarative_base()
@@ -46,4 +46,18 @@ class Comment(Base):
         CheckConstraint(func.length(func.trim(content)) > 0),
         Index("ix_comments_resume_author", "resume_id", "author_id"),
         Index("ix_comments_resume_created_id", "resume_id", "created_at", "id"),
+    )
+
+
+class CommentRating(Base):
+    """One owner's helpfulness decision about a peer's comment."""
+
+    __tablename__ = "comment_ratings"
+    id = Column(Integer, primary_key=True)
+    comment_id = Column(Integer, ForeignKey("comments.id"), nullable=False)
+    rater_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    helpful = Column(Integer, nullable=False)
+    __table_args__ = (
+        CheckConstraint("helpful IN (0, 1)"),
+        UniqueConstraint("comment_id", "rater_id"),
     )

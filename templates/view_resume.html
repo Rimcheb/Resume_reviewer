@@ -37,8 +37,23 @@
                     <p>Member {{ comment.author_id }}{% if comment.author_id == resume.user_id %} (resume owner){% endif %}
                         — {{ comment.created_at }} (UTC)</p>
                     <div class="comment-text">{{ comment.content }}</div>
-
-
+                    {% if comment.id in ratings %}
+                    <p>Owner rated this {{ "helpful" if ratings[comment.id] else "not helpful" }}.</p>
+                    {% endif %}
+                    {% if g.user.id == resume.user_id and comment.author_id != resume.user_id %}
+                    <form method="post" action="{{ url_for('ratings.save', comment_id=comment.id) }}">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        <p class="note">Was this feedback useful to you?</p>
+                        <button type="submit" name="helpful" value="1">Helpful</button>
+                        <button type="submit" name="helpful" value="0">Not helpful</button>
+                    </form>
+                    {% if comment.id in ratings %}
+                    <form method="post" action="{{ url_for('ratings.delete', comment_id=comment.id) }}">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        <button type="submit">Remove rating</button>
+                    </form>
+                    {% endif %}
+                    {% endif %}
                     {% if g.user.id == comment.author_id %}
                     <p><a href="{{ url_for('comments.edit', comment_id=comment.id) }}">Edit comment</a></p>
                     <form method="post" action="{{ url_for('comments.delete', comment_id=comment.id) }}">
