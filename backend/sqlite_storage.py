@@ -12,6 +12,7 @@ from backend.models import Base, Comment, Resume, User
 from sqlalchemy.dialects.sqlite import insert
 from backend.models import CommentRating
 from backend.sqlite_upgrade import SCHEMA_VERSION, upgrade_db_command
+from backend.sqlite_upgrade import backup_db_command
 
 
 def configure_connection(connection, connection_record):
@@ -70,6 +71,7 @@ def init_app(app):
     app.teardown_appcontext(close_db)
     app.cli.add_command(init_db_command)
     app.cli.add_command(upgrade_db_command)
+    app.cli.add_command(backup_db_command)
 
 
 def user_data(user):
@@ -339,3 +341,18 @@ def get_reputation(user_id):
     if total:
         percentage = round(100 * helpful / total)
     return {"helpful": helpful, "total": total, "percentage": percentage}
+
+
+def is_ready():
+    """Check the database file, schema version and mapped columns without writing."""
+    if not Path(current_app.config["DATABASE"]).is_file():
+        return False
+    try:
+        with current_app.extensions["database_engine"].connect() as connection:
+            if connection.exec_driver_sql("PRAGMA user_version").scalar() != SCHEMA_VERSION:
+                return False
+            for table in Base.metadata.sorted_tables:
+                connection.execute(select(table).limit(0))
+    except SQLAlchemyError:
+        return False
+    return True
