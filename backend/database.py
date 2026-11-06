@@ -54,3 +54,23 @@ def list_comments(resume_id):
 def get_comment_by_id(comment_id):
     """Return a plain comment record, or None if it does not exist."""
     return current_app.extensions["storage"].get_comment_by_id(comment_id)
+
+
+def update_resume(resume_id, content, target_field, feedback_request):
+    """Update validated fields after an ownership check; return False if missing."""
+    return current_app.extensions["storage"].update_resume(resume_id, content, target_field, feedback_request)
+
+
+def delete_resume(resume_id):
+    """Delete the authorized resume and its comments atomically; False if missing."""
+    return current_app.extensions["storage"].delete_resume(resume_id)
+
+
+def update_comment(comment_id, content):
+    """Update validated text after an authorship check; return False if missing."""
+    return current_app.extensions["storage"].update_comment(comment_id, content)
+
+
+def delete_comment(comment_id):
+    """After an authorship check, delete a comment; return False if missing."""
+    return current_app.extensions["storage"].delete_comment(comment_id)
