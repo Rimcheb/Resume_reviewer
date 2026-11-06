@@ -1,16 +1,7 @@
-:root {
-    --color-primary: #2f5d8a;
-    --color-text: #1f2328;
-    --color-background: #ffffff;
-    --color-surface: #f5f7f9;
-    --color-border: #d8dee4;
-    --font-body: Arial, sans-serif;
-    --space-3: 0.75rem;
-    --space-4: 1rem;
-    --space-6: 1.5rem;
-    --radius-md: 8px;
-}
+/* Load shared tokens once so page styles use the same design values. */
+@import url("tokens.css");
 
+/* Shared page defaults and content width can support additional pages. */
 body {
     margin: 0;
     font-family: var(--font-body);
@@ -22,8 +13,10 @@ body {
     max-width: 700px;
     margin: 60px auto;
     padding: var(--space-6);
+    overflow-wrap: anywhere;
 }
 
+/* Shared form controls also support future resume and comment forms. */
 form {
     display: flex;
     flex-direction: column;
@@ -34,15 +27,22 @@ form {
 }
 
 textarea {
+    min-width: 0;
     padding: var(--space-4);
-    border: 1px solid var(--color-border);
+    color: var(--color-text);
+    background: var(--color-input-background);
+    border: 1px solid var(--color-input-border);
     border-radius: var(--radius-md);
     font: inherit;
     resize: vertical;
 }
 
+/* Keep keyboard focus visible against the input background. */
 textarea:focus {
-    outline: 2px solid var(--color-primary);
+    border-color: var(--color-focus-border);
+    outline: 2px solid var(--color-focus-border);
+    outline-offset: 2px;
+    box-shadow: var(--focus-ring);
 }
 
 button {
@@ -54,18 +54,119 @@ button {
     font: inherit;
 }
 
+/* Match the visual state to the native disabled attribute in the HTML. */
 button:disabled {
     opacity: 0.6;
     cursor: not-allowed;
 }
 
 .note {
-    font-size: 0.875rem;
+    font-size: var(--text-sm);
 }
 
+/* Reduce outer spacing on narrow screens to leave room for the form. */
 @media (max-width: 600px) {
     .container {
         margin: 20px auto;
         padding: var(--space-4);
+    }
+}
+
+.container.review-page { max-width: 1100px; }
+.resume-review .feedback-request { white-space: pre-wrap; }
+
+/* Review page sections reuse the shared container, form, and design variables. */
+.resume-review {
+    max-width: 1100px;
+    line-height: 1.5;
+}
+
+.resume-review section {
+    min-width: 0;
+}
+
+.resume-review .back-link {
+    color: var(--color-primary);
+    text-underline-offset: 0.2em;
+}
+
+.resume-review .back-link:focus-visible {
+    outline: 2px solid var(--color-primary);
+    outline-offset: 3px;
+}
+
+.resume-review section + section {
+    margin-top: var(--space-6);
+}
+
+/* Preserve pasted line breaks and wrap long text within narrow screens. */
+.resume-review .resume-text,
+.resume-review .comment-text {
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+    padding: var(--space-4);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-md);
+}
+
+/* Give plain resume text the spacing and surface of a document. */
+.resume-review .resume-text {
+    padding: var(--space-6);
+    background: var(--color-background);
+    line-height: 1.7;
+    box-shadow: 0 2px 6px var(--color-border);
+}
+
+.resume-review .comment-text {
+    background: var(--color-surface);
+}
+
+.resume-review .comment-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-3);
+}
+
+/* Keep the editable field inside its form, including on mobile screens. */
+.resume-review textarea {
+    box-sizing: border-box;
+    width: 100%;
+    min-width: 0;
+}
+
+.resume-review form .note {
+    margin: 0;
+}
+
+/* Keep reading order on small screens; place feedback beside the document on desktop. */
+@media (min-width: 900px) {
+    .resume-review {
+        display: grid;
+        grid-template-columns: minmax(0, 3fr) minmax(0, 2fr);
+        grid-template-rows: auto auto 1fr;
+        gap: var(--space-6);
+        align-items: start;
+    }
+
+    .resume-review .review-header {
+        grid-column: 1 / -1;
+    }
+
+    .resume-review .review-header h2 {
+        margin-bottom: 0;
+    }
+
+    .resume-review .resume-section {
+        grid-column: 1;
+        grid-row: 2 / 4;
+    }
+
+    .resume-review .comments-section,
+    .resume-review .comment-form-section {
+        grid-column: 2;
+        margin-top: 0;
     }
 }

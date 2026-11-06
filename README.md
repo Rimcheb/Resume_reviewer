@@ -33,3 +33,13 @@ for HTTPS hosting. Never commit secrets or database files.
 
 Open http://127.0.0.1:5001 and register, then log in. /health returns server status.
 If port 5001 is occupied, choose another port and update the URL.
+
+For an existing database, stop the app and upgrade using a new backup filename:
+
+```bash
+python -m flask --app app upgrade-db --backup before-upgrade.sqlite
+```
+
+Use the virtual environment's Python as above. Upgrades preserve existing records;
+repeating an up-to-date upgrade changes nothing. Submitted text is readable by all
+signed-in members; remove private contact details before posting.
