@@ -39,3 +39,18 @@ def get_resume_by_id(resume_id):
 def list_resumes(user_id=None, target_field="", limit=10, offset=0):
     """Return newest first; match literal field substrings after Python lower()."""
     return current_app.extensions["storage"].list_resumes(user_id, target_field, limit, offset)
+
+
+def create_comment(resume_id, author_id, content):
+    """Save validated comment text and return a plain comment record."""
+    return current_app.extensions["storage"].create_comment(resume_id, author_id, content)
+
+
+def list_comments(resume_id):
+    """Return one resume's comments oldest first, breaking timestamp ties by ID."""
+    return current_app.extensions["storage"].list_comments(resume_id)
+
+
+def get_comment_by_id(comment_id):
+    """Return a plain comment record, or None if it does not exist."""
+    return current_app.extensions["storage"].get_comment_by_id(comment_id)
