@@ -1,6 +1,11 @@
 """Validate resume submissions and serve pages for authenticated members."""
 
+from io import BytesIO
+import zipfile
+
+from docx import Document
 from flask import Blueprint, abort, flash, g, redirect, render_template, request, url_for
+from pypdf import PdfReader
 
 from backend import database
 from backend.auth import login_required
@@ -27,6 +32,62 @@ def submission_error(content, target_field, feedback_request):
     return None
 
 
+MAX_PDF_PAGES = 10
+MAX_DOCX_UNZIPPED = 10 * 1024 * 1024
+MAX_PAGE_CONTENT = 1024 * 1024  # a text-heavy resume page is well under 100 KB
+
+
+def file_text(upload):
+    """Turn an uploaded PDF or DOCX into plain text; None for other types or oversized files.
+
+    A small upload can expand hugely when unpacked, so both formats are capped:
+    pypdf 6 limits each decompressed PDF stream, pages and each page's decoded content
+    are capped, extraction stops once the text is already too long, and a DOCX's
+    unpacked size is checked first (zipfile refuses to inflate an entry past the size
+    its header declares).
+    ponytail: parsing runs in the web process, and a page that reuses one embedded
+    graphic many times can still be slow. With one waitress thread that blocks the site,
+    so move this into a subprocess with a timeout if uploads get abused.
+    """
+    data = BytesIO(upload.read())
+    name = upload.filename.lower()
+    if name.endswith(".pdf"):
+        reader = PdfReader(data)
+        if len(reader.pages) > MAX_PDF_PAGES:
+            return None
+        text = ""
+        for page in reader.pages:
+            contents = page.get_contents()
+            if contents is not None and len(contents.get_data()) > MAX_PAGE_CONTENT:
+                return None
+            text += (page.extract_text() or "") + "\n"
+            if len(text) > RESUME_LIMIT:
+                break  # already too long; submission_error reports it
+        return text.strip()
+    if name.endswith(".docx"):
+        if sum(entry.file_size for entry in zipfile.ZipFile(data).infolist()) > MAX_DOCX_UNZIPPED:
+            return None
+        return "\n".join(paragraph.text for paragraph in Document(data).paragraphs).strip()
+    return None
+
+
+def submitted_content():
+    """Use an uploaded file when one was chosen, else the pasted text; None if unreadable.
+
+    The file is only read in memory. Only the extracted text is saved, never the file.
+    """
+    upload = request.files.get("resume_file")
+    if upload is None or not upload.filename:
+        return request.form.get("resume", "")
+    try:
+        return file_text(upload)
+    except Exception:  # pypdf and python-docx raise many error types for corrupt or encrypted files
+        return None
+
+
+UNREADABLE_FILE = "Upload a readable .pdf or .docx file, or paste your resume as text."
+
+
 def submission_form(content="", target_field="", feedback_request="", error=None, resume=None):
     """Keep form values and limits together for initial display and errors."""
     return render_template(
@@ -47,9 +108,11 @@ def new():
 @login_required
 def create():
     """Save text under the signed-in user's ID and open its detail page."""
-    content = request.form.get("resume", "")
+    content = submitted_content()
     target_field = request.form.get("target_field", "")
     feedback_request = request.form.get("feedback_request", "")
+    if content is None:
+        return submission_form("", target_field, feedback_request, UNREADABLE_FILE), 400
     error = submission_error(content, target_field, feedback_request)
     if error is not None:
         return submission_form(content, target_field, feedback_request, error), 400
@@ -81,9 +144,11 @@ def edit(resume_id):
         abort(404)
     require_owner(resume["user_id"])
     if request.method == "POST":
-        content = request.form.get("resume", "")
+        content = submitted_content()
         target_field = request.form.get("target_field", "")
         feedback_request = request.form.get("feedback_request", "")
+        if content is None:
+            return submission_form("", target_field, feedback_request, UNREADABLE_FILE, resume), 400
         error = submission_error(content, target_field, feedback_request)
         if error is not None:
             return submission_form(content, target_field, feedback_request, error, resume), 400
