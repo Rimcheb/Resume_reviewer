@@ -1,0 +1,7 @@
+{# The four review-template fields; `values` refills them after a validation error. #}
+{% for key, label, hint in sections %}
+<label for="{{ key }}">{{ label }}</label>
+<p id="{{ key }}-hint" class="note">{{ hint }}</p>
+<textarea id="{{ key }}" name="{{ key }}" rows="3" maxlength="{{ section_limit }}" required
+          aria-describedby="{{ key }}-hint">{{ values.get(key, "") if values else "" }}</textarea>
+{% endfor %}
