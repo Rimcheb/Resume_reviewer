@@ -170,3 +170,20 @@ button:disabled {
         margin-top: 0;
     }
 }
+
+/* Side-by-side review comparison: one column per reviewer, stacking on phones. */
+.resume-review .compare-row {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: var(--space-3);
+}
+
+.resume-review .compare-cell .note {
+    margin: 0 0 var(--space-1);
+}
+
+@media (min-width: 900px) {
+    .resume-review .compare-section {
+        grid-column: 1 / -1;
+    }
+}
