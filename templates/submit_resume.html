@@ -8,7 +8,10 @@
 <p>Paste your resume below to get feedback.</p>
 {% endif %}
 <p>All authenticated members can read your resume and feedback request.
-    Remove contact details and anything you do not want to share before posting.</p>
+    We try to hide email addresses and phone numbers automatically, but this can miss some
+    formats. Remove your name, contact details and anything else you do not want to share
+    before posting.</p>
+<p>Reviewing is free. There are no fees.</p>
 {% if error %}<p role="alert">{{ error }}</p>{% endif %}
 <form method="post" action="{{ url_for('resumes.edit', resume_id=resume.id) if resume else url_for('resumes.create') }}">
     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
