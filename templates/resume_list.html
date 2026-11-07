@@ -4,8 +4,13 @@
 <h2>{{ "My Resumes" if is_mine else "Browse Resumes" }}</h2>
 <p>Newest submissions appear first. Choose a request in a field you can help with.</p>
 <form method="get" action="{{ url_for(endpoint) }}">
-    <label for="field">Filter by target role or field</label>
-    <input id="field" name="field" value="{{ target_field }}" maxlength="{{ field_limit }}">
+    <label for="field">Filter by target field</label>
+    <select id="field" name="field">
+        <option value="">All fields</option>
+        {% for field in fields %}
+        <option{% if field == target_field %} selected{% endif %}>{{ field }}</option>
+        {% endfor %}
+    </select>
     <button type="submit">Filter</button>
     <a href="{{ url_for(endpoint) }}">Clear filter</a>
 </form>
