@@ -41,9 +41,11 @@ def list_resumes(user_id=None, target_field="", limit=10, offset=0):
     return current_app.extensions["storage"].list_resumes(user_id, target_field, limit, offset)
 
 
-def create_comment(resume_id, author_id, content):
-    """Save validated comment text and return a plain comment record."""
-    return current_app.extensions["storage"].create_comment(resume_id, author_id, content)
+def create_comment(resume_id, author_id, content, line_number=None):
+    """Save validated comment text, with the resume line it is about, and return a record."""
+    return current_app.extensions["storage"].create_comment(
+        resume_id, author_id, content, line_number
+    )
 
 
 def list_comments(resume_id):

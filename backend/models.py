@@ -42,6 +42,7 @@ class Comment(Base):
     author_id = Column(Integer, ForeignKey("users.id"), nullable=False)
     content = Column(Text, nullable=False)
     created_at = Column(Text, nullable=False, server_default=func.current_timestamp())
+    line_number = Column(Integer)  # resume line the comment is about; None for follow-ups
     __table_args__ = (
         CheckConstraint(func.length(func.trim(content)) > 0),
         Index("ix_comments_resume_author", "resume_id", "author_id"),

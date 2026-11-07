@@ -170,3 +170,24 @@ button:disabled {
         margin-top: 0;
     }
 }
+
+/* Numbered resume lines so comments can point at one; the linked line is highlighted. */
+.resume-review .resume-lines {
+    margin: 0;
+    padding-left: calc(var(--space-6) + 2em);
+}
+
+.resume-review .resume-lines li {
+    min-height: 1.7em;
+    padding-left: var(--space-2);
+}
+
+.resume-review .resume-lines li::marker {
+    color: var(--color-text-muted);
+    font-size: var(--text-sm);
+}
+
+.resume-review .resume-lines li:target {
+    background: var(--color-surface);
+    outline: 2px solid var(--color-focus-border);
+}
