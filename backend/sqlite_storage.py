@@ -3,14 +3,14 @@ from pathlib import Path
 import click
 from flask import current_app, g
 from flask.cli import with_appcontext
-from sqlalchemy import create_engine, event, inspect, select, func, delete
+from sqlalchemy import create_engine, event, inspect, select, func, delete, union
 from sqlalchemy.engine import URL
 from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 from sqlalchemy.orm import Session
 from sqlalchemy.pool import NullPool
 from backend.models import Base, Comment, Resume, User
 from sqlalchemy.dialects.sqlite import insert
-from backend.models import CommentRating
+from backend.models import CommentRating, ReviewCredit
 from backend.sqlite_upgrade import SCHEMA_VERSION, upgrade_db_command
 from backend.sqlite_upgrade import backup_db_command
 
@@ -341,6 +341,34 @@ def get_reputation(user_id):
     if total:
         percentage = round(100 * helpful / total)
     return {"helpful": helpful, "total": total, "percentage": percentage}
+
+
+def record_review_credit(reviewer_id, resume_id):
+    """Remember that this member reviewed someone else's resume (once per resume)."""
+    db = get_db()
+    statement = insert(ReviewCredit).values(reviewer_id=reviewer_id, resume_id=resume_id)
+    try:
+        db.execute(statement.on_conflict_do_nothing(index_elements=["reviewer_id", "resume_id"]))
+        db.commit()
+    except SQLAlchemyError:
+        db.rollback()
+        raise
+
+
+def review_balance(user_id):
+    """Count resumes this member reviewed (others' only, once each) and resumes they posted.
+
+    Credits recorded when reviewing survive the owner deleting the resume; reviews from
+    before credits were recorded still count while they exist.
+    """
+    db = get_db()
+    current = select(Comment.resume_id).join(Resume).where(
+        Comment.author_id == user_id, Resume.user_id != user_id
+    )
+    recorded = select(ReviewCredit.resume_id).where(ReviewCredit.reviewer_id == user_id)
+    given = db.scalar(select(func.count()).select_from(union(current, recorded).subquery()))
+    posted = db.scalar(select(func.count(Resume.id)).where(Resume.user_id == user_id))
+    return {"given": given, "posted": posted}
 
 
 def is_ready():
