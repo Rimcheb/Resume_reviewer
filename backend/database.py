@@ -19,9 +19,14 @@ def get_user_by_id(user_id):
     return current_app.extensions["storage"].get_user_by_id(user_id)
 
 
-def create_user(email, password_hash):
-    """Save a normalized email and password hash, or return None if duplicate."""
-    return current_app.extensions["storage"].create_user(email, password_hash)
+def create_user(email, password_hash, review_fields=()):
+    """Save a normalized email, password hash and review fields, or None if duplicate."""
+    return current_app.extensions["storage"].create_user(email, password_hash, review_fields)
+
+
+def update_review_fields(user_id, review_fields):
+    """Replace the fields this member can review (values already checked against FIELDS)."""
+    return current_app.extensions["storage"].update_review_fields(user_id, review_fields)
 
 
 def create_resume(user_id, content, target_field, feedback_request):
@@ -36,9 +41,11 @@ def get_resume_by_id(resume_id):
     return current_app.extensions["storage"].get_resume_by_id(resume_id)
 
 
-def list_resumes(user_id=None, target_field="", limit=10, offset=0):
-    """Return newest first; match literal field substrings after Python lower()."""
-    return current_app.extensions["storage"].list_resumes(user_id, target_field, limit, offset)
+def list_resumes(user_id=None, target_field="", limit=10, offset=0, preferred_fields=()):
+    """Return newest first, preferred fields first; match field substrings after lower()."""
+    return current_app.extensions["storage"].list_resumes(
+        user_id, target_field, limit, offset, preferred_fields
+    )
 
 
 def create_comment(resume_id, author_id, content):

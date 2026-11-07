@@ -11,6 +11,7 @@
     <label for="password">Password (8 to 128 characters)</label>
     <input id="password" name="password" type="password" minlength="8"
            maxlength="128" autocomplete="new-password" required>
+    {% include "field_checkboxes.html" %}
     <button type="submit">Create account</button>
 </form>
 <p><a href="{{ url_for('auth.login') }}">Log in to an existing account</a></p>

@@ -124,13 +124,16 @@ def resume_list(user_id=None):
     # ponytail: storage still matches by substring, so résumés saved before the
     # dropdown existed (free text like "Software Engineering intern") still show up.
     # One extra row tells us whether a next page exists without counting all rows.
-    records = database.list_resumes(user_id, target_field, PAGE_SIZE + 1, (page - 1) * PAGE_SIZE)
+    # Soft match: on the community feed, resumes in the member's review fields come first.
+    preferred = g.user["review_fields"] if user_id is None and not target_field else []
+    records = database.list_resumes(user_id, target_field, PAGE_SIZE + 1, (page - 1) * PAGE_SIZE,
+                                    preferred)
     if page > 1 and not records:
         abort(404)
     return render_template(
         "resume_list.html", resumes=records[:PAGE_SIZE], has_next=len(records) > PAGE_SIZE,
         page=page, target_field=target_field, is_mine=user_id is not None,
-        endpoint=request.endpoint, fields=FIELDS,
+        endpoint=request.endpoint, fields=FIELDS, preferred=preferred,
     )
 
 
