@@ -185,6 +185,7 @@ def comment_data(comment):
     return {
         "id": comment.id, "resume_id": comment.resume_id, "author_id": comment.author_id,
         "content": comment.content, "created_at": comment.created_at,
+        "pushes_exaggeration": comment.pushes_exaggeration,
     }
 
 
@@ -260,6 +261,21 @@ def update_comment(comment_id, content):
     if comment is None:
         return False
     comment.content = content
+    try:
+        db.commit()
+    except SQLAlchemyError:
+        db.rollback()
+        raise
+    return True
+
+
+def flag_exaggeration(comment_id, flagged):
+    """Set or clear the owner's 'pushes me to exaggerate' flag on one comment."""
+    db = get_db()
+    comment = db.get(Comment, comment_id)
+    if comment is None:
+        return False
+    comment.pushes_exaggeration = flagged
     try:
         db.commit()
     except SQLAlchemyError:

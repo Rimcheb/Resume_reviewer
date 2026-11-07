@@ -41,6 +41,8 @@ class Comment(Base):
     resume_id = Column(Integer, ForeignKey("resumes.id"), nullable=False)
     author_id = Column(Integer, ForeignKey("users.id"), nullable=False)
     content = Column(Text, nullable=False)
+    # Set by the resume owner when advice pushes them to exaggerate or invent results.
+    pushes_exaggeration = Column(Integer, nullable=False, server_default="0")
     created_at = Column(Text, nullable=False, server_default=func.current_timestamp())
     __table_args__ = (
         CheckConstraint(func.length(func.trim(content)) > 0),
