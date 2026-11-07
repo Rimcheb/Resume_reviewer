@@ -46,6 +46,7 @@ class Comment(Base):
         CheckConstraint(func.length(func.trim(content)) > 0),
         Index("ix_comments_resume_author", "resume_id", "author_id"),
         Index("ix_comments_resume_created_id", "resume_id", "created_at", "id"),
+        Index("ix_comments_author_id", "author_id", "id"),
     )
 
 

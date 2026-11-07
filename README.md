@@ -10,7 +10,7 @@ python -m venv .venv
 $env:SECRET_KEY = .venv\Scripts\python.exe -c "import secrets; print(secrets.token_hex(32))"
 $env:COOKIE_SECURE = "false"
 .venv\Scripts\python.exe -m flask --app app init-db
-.venv\Scripts\python.exe -m flask --app app run --port 5001
+.venv\Scripts\waitress-serve.exe --call --listen=127.0.0.1:5001 --threads=1 app:create_app
 ```
 
 macOS/Linux:
@@ -21,7 +21,7 @@ python3 -m venv .venv
 export SECRET_KEY=$(.venv/bin/python -c "import secrets; print(secrets.token_hex(32))")
 export COOKIE_SECURE=false
 .venv/bin/python -m flask --app app init-db
-.venv/bin/python -m flask --app app run --port 5001
+.venv/bin/waitress-serve --call --listen=127.0.0.1:5001 --threads=1 app:create_app
 ```
 
 Run init-db only for a new database. It refuses existing tables. Keep existing data.
@@ -43,3 +43,19 @@ python -m flask --app app upgrade-db --backup before-upgrade.sqlite
 Use the virtual environment's Python as above. Upgrades preserve existing records;
 repeating an up-to-date upgrade changes nothing. Submitted text is readable by all
 signed-in members; remove private contact details before posting.
+
+/ready checks database availability/schema; /health checks the server independently.
+Use one application instance and a persistent local SQLite file for hosting.
+
+Create a consistent backup with a new destination filename:
+
+```bash
+python -m flask --app app backup-db --backup manual-backup.sqlite
+```
+
+Store another copy off the host. To restore, stop every app process, preserve the
+current database, copy the backup to a new file and set DATABASE_PATH to that copy.
+Upgrade it with another backup if necessary, then start and check /ready and saved
+records. A snapshot omits later changes. For code rollback, use the matching older
+code with its pre-upgrade backup. Keep HTTPS and private environment settings on
+the host; debug mode is off.
