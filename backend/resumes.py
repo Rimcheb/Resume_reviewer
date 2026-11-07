@@ -1,5 +1,7 @@
 """Validate resume submissions and serve pages for authenticated members."""
 
+import re
+
 from flask import Blueprint, abort, flash, g, redirect, render_template, request, url_for
 
 from backend import database
@@ -14,6 +16,24 @@ FIELD_LIMIT = 100
 FEEDBACK_LIMIT = 1000
 PAGE_SIZE = 10
 MAX_PAGE = 1000000
+
+# Bounded repeats (RFC length limits) keep matching linear on 20,000-character input.
+EMAIL = re.compile(r"[\w.+-]{1,64}@[\w-]{1,63}\.[\w.-]{1,190}")
+# (555) 123-4567, 555.123.4567, +1 555 123 4567, or + then 3-6 digit groups (+44 20 7946 0958).
+# Fixed group sizes stop the match at the number, so "2019 - 2023" after it is kept.
+PHONE = re.compile(
+    r"(?:\+\d{1,3}[\s.-]?)?\(?\b\d{3}\)?[\s.-]?\d{3}[\s.-]?\d{4}\b"
+    r"|\+\d{1,3}(?:[\s.-]\d{2,4}){2,5}\b"
+)
+
+
+def redact(text):
+    """Replace emails and phone numbers before anything is saved.
+
+    ponytail: regex only. Names are not detected, and an international number
+    written right before a year can absorb that year. Use a PII library if that matters.
+    """
+    return PHONE.sub("[phone]", EMAIL.sub("[email]", text))
 
 
 def submission_error(content, target_field, feedback_request):
@@ -54,7 +74,7 @@ def create():
     if error is not None:
         return submission_form(content, target_field, feedback_request, error), 400
     resume = database.create_resume(
-        g.user["id"], content, target_field.strip(), feedback_request
+        g.user["id"], redact(content), redact(target_field.strip()), redact(feedback_request)
     )
     return redirect(url_for("resumes.detail", resume_id=resume["id"]), code=303)
 
@@ -87,7 +107,8 @@ def edit(resume_id):
         error = submission_error(content, target_field, feedback_request)
         if error is not None:
             return submission_form(content, target_field, feedback_request, error, resume), 400
-        changed = database.update_resume(resume_id, content, target_field.strip(), feedback_request)
+        changed = database.update_resume(resume_id, redact(content), redact(target_field.strip()),
+                                         redact(feedback_request))
         if not changed:
             abort(404)
         flash("Resume updated. Existing comments were kept.")
