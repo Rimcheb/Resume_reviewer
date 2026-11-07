@@ -3,13 +3,18 @@
 {% block content %}
 <h2>Member {{ user_id }} feedback</h2>
 {% if reputation.total %}
-<p>{{ reputation.helpful }} of {{ reputation.total }} rated comments marked helpful
-    ({{ reputation.percentage }}%).</p>
+<table>
+    <tr><th scope="row">Helpful</th>
+        <td>{{ reputation.helpful }} of {{ reputation.total }} rated reviews ({{ reputation.percentage }}%)</td></tr>
+    <tr><th scope="row">Specific</th>
+        <td>{% if reputation.specific_total %}{{ reputation.specific }} of {{ reputation.specific_total }}
+            rated reviews ({{ reputation.specific_percentage }}%){% else %}Not rated yet{% endif %}</td></tr>
+</table>
 {% else %}
 <p>Not rated yet.</p>
 {% endif %}
-<p>Only the resume owner can rate another member's feedback.
-    The percentage is helpful ratings divided by all ratings, rounded to a whole number.
-    Unrated comments and self-comments do not count.</p>
+<p>Only the resume owner can rate another member's feedback, first as helpful or not, then as
+    specific or vague. Each percentage is the "yes" ratings divided by all ratings of that kind,
+    rounded to a whole number. Unrated comments and self-comments do not count.</p>
 <p><a href="{{ url_for('resumes.feed') }}">Browse resumes</a></p>
 {% endblock %}
