@@ -36,6 +36,9 @@
                 <article id="comment-{{ comment.id }}">
                     <p><a href="{{ url_for('ratings.reviewer', user_id=comment.author_id) }}">Member {{ comment.author_id }}</a>{% if comment.author_id == resume.user_id %} (resume owner){% endif %}
                         — {{ comment.created_at }} (UTC)</p>
+                    {% if comment.review_seconds and comment.review_seconds >= deep_review %}
+                    <p class="badge">Deep review ({{ deep_review // 60 }}+ minutes)</p>
+                    {% endif %}
                     <div class="comment-text">{{ comment.content }}</div>
                     {% if comment.id in ratings %}
                     <p>Owner rated this {{ "helpful" if ratings[comment.id] else "not helpful" }}.</p>
@@ -80,8 +83,35 @@
                 aria-describedby="comment-instructions comment-limit"
                 placeholder="For example, add a measurable result to your most recent role."></textarea>
             <p id="comment-limit" class="note">Up to {{ comment_limit }} characters. All authenticated members can read comments.</p>
+            {% if elapsed is not none %}
+            <p id="review-timer" class="note" aria-live="polite"
+               data-elapsed="{{ elapsed }}" data-min="{{ min_review }}" data-target="{{ target_review }}">
+                Reviews need at least {{ min_review // 60 }} minutes; aim for about {{ target_review // 60 }}.</p>
+            {% endif %}
             <button type="submit">Post comment</button>
         </form>
+        {% if elapsed is not none %}
+        <script>
+            // Soft countdown: the button unlocks after the minimum; the server checks it too.
+            const timer = document.getElementById("review-timer");
+            const button = timer.parentElement.querySelector("button[type=submit]");
+            const start = Date.now() - Number(timer.dataset.elapsed) * 1000;
+            const minimum = Number(timer.dataset.min), target = Number(timer.dataset.target);
+            function tick() {
+                const seconds = (Date.now() - start) / 1000;
+                button.disabled = seconds < minimum;
+                if (seconds < minimum) {
+                    timer.textContent = `Post available in ${Math.ceil((minimum - seconds) / 60)} min. Aim for about ${target / 60} min.`;
+                } else if (seconds < target) {
+                    timer.textContent = `About ${Math.ceil((target - seconds) / 60)} min left of the ${target / 60}-minute target.`;
+                } else {
+                    timer.textContent = `${target / 60}-minute target reached. Keep going for a deep review, or post when ready.`;
+                }
+            }
+            tick();
+            setInterval(tick, 15000);
+        </script>
+        {% endif %}
     </section>
 </div>
 {% endblock %}

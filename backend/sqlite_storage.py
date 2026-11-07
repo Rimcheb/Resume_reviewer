@@ -10,7 +10,7 @@ from sqlalchemy.orm import Session
 from sqlalchemy.pool import NullPool
 from backend.models import Base, Comment, Resume, User
 from sqlalchemy.dialects.sqlite import insert
-from backend.models import CommentRating
+from backend.models import CommentRating, ReviewStart
 from backend.sqlite_upgrade import SCHEMA_VERSION, upgrade_db_command
 from backend.sqlite_upgrade import backup_db_command
 
@@ -185,13 +185,15 @@ def comment_data(comment):
     return {
         "id": comment.id, "resume_id": comment.resume_id, "author_id": comment.author_id,
         "content": comment.content, "created_at": comment.created_at,
+        "review_seconds": comment.review_seconds,
     }
 
 
-def create_comment(resume_id, author_id, content):
+def create_comment(resume_id, author_id, content, review_seconds=None):
     """Save a comment atomically; foreign keys require an existing resume and author."""
     db = get_db()
-    comment = Comment(resume_id=resume_id, author_id=author_id, content=content)
+    comment = Comment(resume_id=resume_id, author_id=author_id, content=content,
+                      review_seconds=review_seconds)
     db.add(comment)
     try:
         db.flush()
@@ -235,6 +237,41 @@ def update_resume(resume_id, content, target_field, feedback_request):
     return True
 
 
+def start_review(resume_id, reviewer_id, now):
+    """Record the first time this reviewer opened the resume and return that time."""
+    db = get_db()
+    statement = insert(ReviewStart).values(
+        resume_id=resume_id, reviewer_id=reviewer_id, started_at=now
+    ).on_conflict_do_nothing(index_elements=["resume_id", "reviewer_id"])
+    try:
+        db.execute(statement)
+        db.commit()
+    except SQLAlchemyError:
+        db.rollback()
+        raise
+    return get_review_start(resume_id, reviewer_id)
+
+
+def get_review_start(resume_id, reviewer_id):
+    """Return when this reviewer opened the resume, or None if they have not."""
+    return get_db().scalar(select(ReviewStart.started_at).where(
+        ReviewStart.resume_id == resume_id, ReviewStart.reviewer_id == reviewer_id
+    ))
+
+
+def finish_review(resume_id, reviewer_id):
+    """Remove the start time after a review is posted, so the next review starts fresh."""
+    db = get_db()
+    try:
+        db.execute(delete(ReviewStart).where(
+            ReviewStart.resume_id == resume_id, ReviewStart.reviewer_id == reviewer_id
+        ))
+        db.commit()
+    except SQLAlchemyError:
+        db.rollback()
+        raise
+
+
 def delete_resume(resume_id):
     """Delete children before their parent in one transaction, preserving foreign keys."""
     db = get_db()
@@ -244,6 +281,7 @@ def delete_resume(resume_id):
     try:
         comment_ids = select(Comment.id).where(Comment.resume_id == resume_id)
         db.execute(delete(CommentRating).where(CommentRating.comment_id.in_(comment_ids)))
+        db.execute(delete(ReviewStart).where(ReviewStart.resume_id == resume_id))
         db.execute(delete(Comment).where(Comment.resume_id == resume_id))
         db.delete(resume)
         db.commit()
