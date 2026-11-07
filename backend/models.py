@@ -26,6 +26,7 @@ class Resume(Base):
     created_at = Column(Text, nullable=False, server_default=func.current_timestamp())
     target_field = Column(Text, nullable=False, server_default="")
     feedback_request = Column(Text, nullable=False, server_default="")
+    share_token = Column(Text)  # set = private: hidden from the feed, readable via its share link
     __table_args__ = (
         CheckConstraint(func.length(func.trim(content)) > 0),
         Index("ix_resumes_created_at_id", "created_at", "id"),

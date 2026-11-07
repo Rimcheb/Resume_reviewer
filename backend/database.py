@@ -24,11 +24,16 @@ def create_user(email, password_hash):
     return current_app.extensions["storage"].create_user(email, password_hash)
 
 
-def create_resume(user_id, content, target_field, feedback_request):
+def create_resume(user_id, content, target_field, feedback_request, share_token=None):
     """Save validated submission fields and return a plain resume record."""
     return current_app.extensions["storage"].create_resume(
-        user_id, content, target_field, feedback_request
+        user_id, content, target_field, feedback_request, share_token
     )
+
+
+def get_resume_by_token(share_token):
+    """Return the private resume with this share token, or None."""
+    return current_app.extensions["storage"].get_resume_by_token(share_token)
 
 
 def get_resume_by_id(resume_id):
@@ -56,9 +61,11 @@ def get_comment_by_id(comment_id):
     return current_app.extensions["storage"].get_comment_by_id(comment_id)
 
 
-def update_resume(resume_id, content, target_field, feedback_request):
-    """Update validated fields after an ownership check; return False if missing."""
-    return current_app.extensions["storage"].update_resume(resume_id, content, target_field, feedback_request)
+def update_resume(resume_id, content, target_field, feedback_request, share_token=None):
+    """Update validated fields after an ownership check; None share_token makes it public."""
+    return current_app.extensions["storage"].update_resume(
+        resume_id, content, target_field, feedback_request, share_token
+    )
 
 
 def delete_resume(resume_id):

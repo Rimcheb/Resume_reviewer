@@ -4,7 +4,7 @@ from flask import Blueprint, abort, flash, g, redirect, render_template, request
 
 from backend import database
 from backend.auth import login_required
-from backend.permissions import require_owner
+from backend.permissions import require_owner, require_viewer
 
 bp = Blueprint("comments", __name__)
 COMMENT_LIMIT = 5000
@@ -24,6 +24,7 @@ def create(resume_id):
     resume = database.get_resume_by_id(resume_id)
     if resume is None:
         abort(404)
+    require_viewer(resume)
     content = request.form.get("comment", "")
     error = comment_error(content)
     if error is not None:
@@ -45,6 +46,7 @@ def edit(comment_id):
     resume = database.get_resume_by_id(comment["resume_id"])
     if resume is None:
         abort(404)
+    require_viewer(resume)  # lost access to a private resume: can still delete, not edit
     content = comment["content"]
     error = None
     status = 200

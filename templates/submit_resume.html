@@ -26,6 +26,11 @@
     <textarea id="resume" name="resume" rows="12" maxlength="{{ resume_limit }}"
               placeholder="Paste your resume here..." required>{{ content }}</textarea>
     <p class="note">Up to {{ resume_limit }} characters. Text only.</p>
+    {% set private = request.form.get("private") == "1" if request.method == "POST" else (resume and resume.share_token) %}
+    <label><input type="checkbox" name="private" value="1" aria-describedby="private-note"
+                  {% if private %}checked{% endif %}> Private: only people I send the link to</label>
+    <p id="private-note" class="note">Private resumes are hidden from Browse. After saving, you get a
+        link to send to people you know; they need an account to open it.</p>
     <button type="submit">{{ "Save changes" if resume else "Submit Resume" }}</button>
 </form>
 {% if resume %}<p><a href="{{ url_for('resumes.detail', resume_id=resume.id) }}">Back to resume</a></p>{% endif %}

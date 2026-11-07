@@ -8,6 +8,13 @@
         <h2>{{ resume.target_field or "Review Resume" }}</h2>
         <p>Submitted {{ resume.created_at }} (UTC)</p>
         <p>{{ "Peer feedback received" if resume.has_peer_feedback else "Awaiting peer feedback" }}</p>
+        {% if resume.share_token %}
+        <p>Private: hidden from Browse.</p>
+        {% if g.user.id == resume.user_id %}
+        <label for="share-link">Share link (send it to people you want feedback from)</label>
+        <input id="share-link" readonly value="{{ url_for('resumes.shared', token=resume.share_token, _external=True) }}">
+        {% endif %}
+        {% endif %}
     </header>
 
     <section class="resume-section" aria-labelledby="resume-heading">

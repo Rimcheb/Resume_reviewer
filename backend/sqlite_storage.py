@@ -123,15 +123,16 @@ def resume_data(resume, has_peer_feedback=False):
         "created_at": resume.created_at,
         "target_field": resume.target_field,
         "feedback_request": resume.feedback_request,
+        "share_token": resume.share_token,
         "has_peer_feedback": has_peer_feedback,
     }
 
 
-def create_resume(user_id, content, target_field, feedback_request):
+def create_resume(user_id, content, target_field, feedback_request, share_token=None):
     """Save one resume and roll back if any database operation fails."""
     db = get_db()
     resume = Resume(user_id=user_id, content=content, target_field=target_field,
-                    feedback_request=feedback_request)
+                    feedback_request=feedback_request, share_token=share_token)
     db.add(resume)
     try:
         db.flush()
@@ -161,11 +162,22 @@ def get_resume_by_id(resume_id):
     return resume_data(resume, has_peer_feedback)
 
 
+def get_resume_by_token(share_token):
+    """Find a private resume by its share link token."""
+    row = get_db().execute(resume_query().where(Resume.share_token == share_token)).first()
+    if row is None:
+        return None
+    resume, has_peer_feedback = row
+    return resume_data(resume, has_peer_feedback)
+
+
 def list_resumes(user_id=None, target_field="", limit=10, offset=0):
     """Filter, order, and limit rows in SQL before copying the returned records."""
     query = resume_query()
     if user_id is not None:
         query = query.where(Resume.user_id == user_id)
+    else:
+        query = query.where(Resume.share_token.is_(None))  # private resumes stay off the feed
     if target_field:
         field = func.lowercase(Resume.target_field)
         # instr finds literal text, including % and _, and returns 0 if absent.
@@ -218,7 +230,7 @@ def get_comment_by_id(comment_id):
     return comment_data(get_db().get(Comment, comment_id))
 
 
-def update_resume(resume_id, content, target_field, feedback_request):
+def update_resume(resume_id, content, target_field, feedback_request, share_token=None):
     """Change only the editable fields, keeping ownership, creation time, and comments."""
     db = get_db()
     resume = db.get(Resume, resume_id)
@@ -227,6 +239,7 @@ def update_resume(resume_id, content, target_field, feedback_request):
     resume.content = content
     resume.target_field = target_field
     resume.feedback_request = feedback_request
+    resume.share_token = share_token
     try:
         db.commit()
     except SQLAlchemyError:
