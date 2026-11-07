@@ -5,12 +5,13 @@
 {% if resume %}
 <p>Existing comments will stay. They may refer to an earlier version of your text.</p>
 {% else %}
-<p>Paste your resume below to get feedback.</p>
+<p>Paste your resume or upload a PDF or Word file to get feedback.</p>
 {% endif %}
 <p>All authenticated members can read your resume and feedback request.
     Remove contact details and anything you do not want to share before posting.</p>
 {% if error %}<p role="alert">{{ error }}</p>{% endif %}
-<form method="post" action="{{ url_for('resumes.edit', resume_id=resume.id) if resume else url_for('resumes.create') }}">
+<form method="post" enctype="multipart/form-data"
+      action="{{ url_for('resumes.edit', resume_id=resume.id) if resume else url_for('resumes.create') }}">
     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
     <label for="target_field">Target role or field</label>
     <input id="target_field" name="target_field" value="{{ target_field }}"
@@ -22,10 +23,16 @@
               maxlength="{{ feedback_limit }}">{{ feedback_request }}</textarea>
     <p class="note">Up to {{ feedback_limit }} characters.</p>
 
-    <label for="resume">Your Resume</label>
+    <label for="resume_file">Upload your resume (PDF or Word .docx)</label>
+    <input id="resume_file" name="resume_file" type="file" accept=".pdf,.docx"
+           aria-describedby="resume-file-note">
+    <p id="resume-file-note" class="note">Up to 2 MB. We keep only the text, never the file.
+        {% if resume %}Uploading replaces the text below.{% endif %}</p>
+
+    <label for="resume">Or paste your resume</label>
     <textarea id="resume" name="resume" rows="12" maxlength="{{ resume_limit }}"
-              placeholder="Paste your resume here..." required>{{ content }}</textarea>
-    <p class="note">Up to {{ resume_limit }} characters. Text only.</p>
+              placeholder="Paste your resume here...">{{ content }}</textarea>
+    <p class="note">Up to {{ resume_limit }} characters. Paste text or upload a PDF/DOCX.</p>
     <button type="submit">{{ "Save changes" if resume else "Submit Resume" }}</button>
 </form>
 {% if resume %}<p><a href="{{ url_for('resumes.detail', resume_id=resume.id) }}">Back to resume</a></p>{% endif %}
