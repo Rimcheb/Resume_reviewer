@@ -14,6 +14,8 @@ FIELD_LIMIT = 100
 FEEDBACK_LIMIT = 1000
 PAGE_SIZE = 10
 MAX_PAGE = 1000000
+# Survey: 53% expect a review within 24 hours and 96% within 3 days.
+CLAIM_HOURS = 48
 
 
 def submission_error(content, target_field, feedback_request):
@@ -67,7 +69,9 @@ def detail(resume_id):
     if resume is None:
         abort(404)
     comments = database.list_comments(resume_id)
+    database.expire_claims()
     return render_template("view_resume.html", resume=resume, comments=comments,
+                           claim=database.get_open_claim(resume_id), claim_hours=CLAIM_HOURS,
                            ratings=database.list_ratings(resume_id),
                            comment_limit=COMMENT_LIMIT)
 
@@ -96,6 +100,23 @@ def edit(resume_id):
                            resume["feedback_request"], resume=resume)
 
 
+@bp.post("/resumes/<int:resume_id>/claim")
+@login_required
+def claim(resume_id):
+    """Reserve a resume for review for 48 hours; it leaves other members' feeds meanwhile."""
+    resume = database.get_resume_by_id(resume_id)
+    if resume is None:
+        abort(404)
+    if resume["user_id"] == g.user["id"]:
+        abort(403)
+    database.expire_claims()
+    if database.claim_review(resume_id, g.user["id"], CLAIM_HOURS) is None:
+        flash("Another member is already reviewing this resume.")
+    else:
+        flash(f"Claimed. Post your review within {CLAIM_HOURS} hours.")
+    return redirect(url_for("resumes.detail", resume_id=resume_id), code=303)
+
+
 @bp.post("/resumes/<int:resume_id>/delete")
 @login_required
 def delete(resume_id):
@@ -122,7 +143,9 @@ def resume_list(user_id=None):
     if len(target_field) > FIELD_LIMIT:
         abort(400)
     # One extra row tells us whether a next page exists without counting all rows.
-    records = database.list_resumes(user_id, target_field, PAGE_SIZE + 1, (page - 1) * PAGE_SIZE)
+    database.expire_claims()
+    records = database.list_resumes(user_id, target_field, PAGE_SIZE + 1, (page - 1) * PAGE_SIZE,
+                                    viewer_id=g.user["id"])
     if page > 1 and not records:
         abort(404)
     return render_template(

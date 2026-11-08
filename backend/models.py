@@ -1,6 +1,6 @@
 """Define the tables and constraints used for new databases and ORM queries."""
 
-from sqlalchemy import CheckConstraint, Column, ForeignKey, Index, Integer, Text, UniqueConstraint, func
+from sqlalchemy import CheckConstraint, Column, ForeignKey, Index, Integer, Text, UniqueConstraint, func, text
 from sqlalchemy.orm import declarative_base
 
 Base = declarative_base()
@@ -47,6 +47,27 @@ class Comment(Base):
         Index("ix_comments_resume_author", "resume_id", "author_id"),
         Index("ix_comments_resume_created_id", "resume_id", "created_at", "id"),
         Index("ix_comments_author_id", "author_id", "id"),
+    )
+
+
+class ReviewClaim(Base):
+    """A reviewer's promise to review a resume within 48 hours.
+
+    status is open, done (reviewed in time) or expired (missed the deadline). The partial
+    unique index lets each resume have only one open claim at a time.
+    """
+
+    __tablename__ = "review_claims"
+    id = Column(Integer, primary_key=True)
+    resume_id = Column(Integer, ForeignKey("resumes.id"), nullable=False)
+    reviewer_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    claimed_at = Column(Text, nullable=False, server_default=func.current_timestamp())
+    due_at = Column(Text, nullable=False)  # UTC 'YYYY-MM-DD HH:MM:SS', like CURRENT_TIMESTAMP
+    status = Column(Text, nullable=False, server_default="open")
+    __table_args__ = (
+        CheckConstraint("status IN ('open', 'done', 'expired')"),
+        Index("ix_review_claims_one_open", "resume_id", unique=True, sqlite_where=text("status = 'open'")),
+        Index("ix_review_claims_reviewer", "reviewer_id", "status"),
     )
 
 

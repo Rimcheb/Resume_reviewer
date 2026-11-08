@@ -8,6 +8,12 @@
 {% else %}
 <p>Not rated yet.</p>
 {% endif %}
+{% if reliability.total %}
+<p>On time: {{ reliability.done }} of {{ reliability.total }} claimed reviews posted within
+    48 hours ({{ reliability.percentage }}%).</p>
+{% else %}
+<p>On time: no claimed reviews finished yet.</p>
+{% endif %}
 <p>Only the resume owner can rate another member's feedback.
     The percentage is helpful ratings divided by all ratings, rounded to a whole number.
     Unrated comments and self-comments do not count.</p>

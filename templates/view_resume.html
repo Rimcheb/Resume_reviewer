@@ -8,6 +8,19 @@
         <h2>{{ resume.target_field or "Review Resume" }}</h2>
         <p>Submitted {{ resume.created_at }} (UTC)</p>
         <p>{{ "Peer feedback received" if resume.has_peer_feedback else "Awaiting peer feedback" }}</p>
+        {% if claim and claim.reviewer_id == g.user.id %}
+        <p role="status">You claimed this review. Post it by {{ claim.due_at }} (UTC), or it goes back to
+            the feed and counts as late.</p>
+        {% elif claim %}
+        <p>Being reviewed by <a href="{{ url_for('ratings.reviewer', user_id=claim.reviewer_id) }}">Member {{ claim.reviewer_id }}</a>,
+            due {{ claim.due_at }} (UTC).</p>
+        {% elif g.user.id != resume.user_id %}
+        <form method="post" action="{{ url_for('resumes.claim', resume_id=resume.id) }}">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <p class="note">Claiming hides this resume from other reviewers while you work on it.</p>
+            <button type="submit">Claim this review ({{ claim_hours }} hours)</button>
+        </form>
+        {% endif %}
     </header>
 
     <section class="resume-section" aria-labelledby="resume-heading">

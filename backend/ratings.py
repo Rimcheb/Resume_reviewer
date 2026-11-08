@@ -54,5 +54,7 @@ def reviewer(user_id):
     """Show only the member ID and derived helpfulness, never their email or hash."""
     if database.get_user_by_id(user_id) is None:
         abort(404)
+    database.expire_claims()
     return render_template("reviewer.html", user_id=user_id,
-                           reputation=database.get_reputation(user_id))
+                           reputation=database.get_reputation(user_id),
+                           reliability=database.get_reliability(user_id))

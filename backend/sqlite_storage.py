@@ -3,14 +3,14 @@ from pathlib import Path
 import click
 from flask import current_app, g
 from flask.cli import with_appcontext
-from sqlalchemy import create_engine, event, inspect, select, func, delete
+from sqlalchemy import create_engine, event, inspect, select, func, delete, update
 from sqlalchemy.engine import URL
 from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 from sqlalchemy.orm import Session
 from sqlalchemy.pool import NullPool
 from backend.models import Base, Comment, Resume, User
 from sqlalchemy.dialects.sqlite import insert
-from backend.models import CommentRating
+from backend.models import CommentRating, ReviewClaim
 from backend.sqlite_upgrade import SCHEMA_VERSION, upgrade_db_command
 from backend.sqlite_upgrade import backup_db_command
 
@@ -161,11 +161,17 @@ def get_resume_by_id(resume_id):
     return resume_data(resume, has_peer_feedback)
 
 
-def list_resumes(user_id=None, target_field="", limit=10, offset=0):
-    """Filter, order, and limit rows in SQL before copying the returned records."""
+def list_resumes(user_id=None, target_field="", limit=10, offset=0, viewer_id=None):
+    """Filter, order, and limit rows in SQL; the feed hides resumes others have claimed."""
     query = resume_query()
     if user_id is not None:
         query = query.where(Resume.user_id == user_id)
+    elif viewer_id is not None:
+        claimed_by_other = select(ReviewClaim.id).where(
+            ReviewClaim.resume_id == Resume.id, ReviewClaim.status == "open",
+            ReviewClaim.reviewer_id != viewer_id,
+        ).exists()
+        query = query.where(~claimed_by_other)
     if target_field:
         field = func.lowercase(Resume.target_field)
         # instr finds literal text, including % and _, and returns 0 if absent.
@@ -244,6 +250,7 @@ def delete_resume(resume_id):
     try:
         comment_ids = select(Comment.id).where(Comment.resume_id == resume_id)
         db.execute(delete(CommentRating).where(CommentRating.comment_id.in_(comment_ids)))
+        db.execute(delete(ReviewClaim).where(ReviewClaim.resume_id == resume_id))
         db.execute(delete(Comment).where(Comment.resume_id == resume_id))
         db.delete(resume)
         db.commit()
@@ -341,6 +348,84 @@ def get_reputation(user_id):
     if total:
         percentage = round(100 * helpful / total)
     return {"helpful": helpful, "total": total, "percentage": percentage}
+
+
+def claim_data(claim):
+    """Copy a claim into a plain record."""
+    if claim is None:
+        return None
+    return {"id": claim.id, "resume_id": claim.resume_id, "reviewer_id": claim.reviewer_id,
+            "claimed_at": claim.claimed_at, "due_at": claim.due_at, "status": claim.status}
+
+
+def expire_claims():
+    """Mark open claims past their deadline as expired, which puts the resume back in the feed.
+
+    Run on page loads instead of a scheduled job, so the host needs no background worker.
+    """
+    db = get_db()
+    try:
+        db.execute(update(ReviewClaim).where(
+            ReviewClaim.status == "open", ReviewClaim.due_at < func.datetime("now")
+        ).values(status="expired"))
+        db.commit()
+    except SQLAlchemyError:
+        db.rollback()
+        raise
+
+
+def get_open_claim(resume_id):
+    """Return the resume's open claim, or None."""
+    return claim_data(get_db().scalar(select(ReviewClaim).where(
+        ReviewClaim.resume_id == resume_id, ReviewClaim.status == "open"
+    )))
+
+
+def claim_review(resume_id, reviewer_id, hours):
+    """Open a claim due in `hours`; return None if the resume already has an open claim."""
+    db = get_db()
+    claim = ReviewClaim(resume_id=resume_id, reviewer_id=reviewer_id,
+                        due_at=func.datetime("now", f"+{int(hours)} hours"))
+    db.add(claim)
+    try:
+        db.flush()
+        db.refresh(claim)
+        result = claim_data(claim)
+        db.commit()
+    except IntegrityError:  # the one-open-claim index: someone else claimed it first
+        db.rollback()
+        return None
+    except SQLAlchemyError:
+        db.rollback()
+        raise
+    return result
+
+
+def complete_claim(resume_id, reviewer_id):
+    """Mark this reviewer's open claim on the resume as done, if they have one."""
+    db = get_db()
+    try:
+        db.execute(update(ReviewClaim).where(
+            ReviewClaim.resume_id == resume_id, ReviewClaim.reviewer_id == reviewer_id,
+            ReviewClaim.status == "open",
+        ).values(status="done"))
+        db.commit()
+    except SQLAlchemyError:
+        db.rollback()
+        raise
+
+
+def get_reliability(user_id):
+    """Count claimed reviews finished on time versus missed, and the on-time percentage."""
+    rows = dict(get_db().execute(
+        select(ReviewClaim.status, func.count(ReviewClaim.id))
+        .where(ReviewClaim.reviewer_id == user_id, ReviewClaim.status != "open")
+        .group_by(ReviewClaim.status)
+    ).all())
+    done, expired = rows.get("done", 0), rows.get("expired", 0)
+    total = done + expired
+    return {"done": done, "expired": expired, "total": total,
+            "percentage": round(100 * done / total) if total else None}
 
 
 def is_ready():

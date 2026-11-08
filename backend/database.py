@@ -36,9 +36,11 @@ def get_resume_by_id(resume_id):
     return current_app.extensions["storage"].get_resume_by_id(resume_id)
 
 
-def list_resumes(user_id=None, target_field="", limit=10, offset=0):
-    """Return newest first; match literal field substrings after Python lower()."""
-    return current_app.extensions["storage"].list_resumes(user_id, target_field, limit, offset)
+def list_resumes(user_id=None, target_field="", limit=10, offset=0, viewer_id=None):
+    """Return newest first; match field substrings; hide resumes others claimed from viewer_id."""
+    return current_app.extensions["storage"].list_resumes(
+        user_id, target_field, limit, offset, viewer_id
+    )
 
 
 def create_comment(resume_id, author_id, content):
@@ -94,6 +96,31 @@ def list_ratings(resume_id):
 def get_reputation(user_id):
     """Return helpful, total and percentage; an unrated percentage is None."""
     return current_app.extensions["storage"].get_reputation(user_id)
+
+
+def expire_claims():
+    """Expire open review claims past their 48-hour deadline."""
+    return current_app.extensions["storage"].expire_claims()
+
+
+def get_open_claim(resume_id):
+    """Return the resume's open review claim, or None."""
+    return current_app.extensions["storage"].get_open_claim(resume_id)
+
+
+def claim_review(resume_id, reviewer_id, hours):
+    """Open a review claim due in `hours`; None if the resume is already claimed."""
+    return current_app.extensions["storage"].claim_review(resume_id, reviewer_id, hours)
+
+
+def complete_claim(resume_id, reviewer_id):
+    """Mark the reviewer's open claim on this resume as done."""
+    return current_app.extensions["storage"].complete_claim(resume_id, reviewer_id)
+
+
+def get_reliability(user_id):
+    """Return done, expired, total and on-time percentage (None if no finished claims)."""
+    return current_app.extensions["storage"].get_reliability(user_id)
 
 
 def is_ready():
