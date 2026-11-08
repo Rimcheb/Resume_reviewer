@@ -69,6 +69,25 @@
         </ul>
     </section>
 
+    {% if reviews|length >= 2 %}
+    <section class="compare-section" aria-labelledby="compare-heading">
+        <h3 id="compare-heading">Compare reviews</h3>
+        <p class="note">Each row is one part of the review template. Where reviewers say the same
+            thing, it's probably worth changing; where they differ, use your own judgment or ask them.</p>
+        {% for key, label, hint in sections %}
+        <h4>{{ label }}</h4>
+        <div class="compare-row">
+            {% for review in reviews %}
+            <div class="compare-cell">
+                <p class="note"><a href="#comment-{{ review.comment.id }}">Member {{ review.comment.author_id }}</a></p>
+                <div class="comment-text">{{ review.parts[label] }}</div>
+            </div>
+            {% endfor %}
+        </div>
+        {% endfor %}
+    </section>
+    {% endif %}
+
     <section class="comment-form-section" aria-labelledby="write-comment-heading">
         {% if g.user.id == resume.user_id %}
         <h3 id="write-comment-heading">Add a follow-up</h3>

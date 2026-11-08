@@ -4,7 +4,7 @@ from flask import Blueprint, abort, flash, g, redirect, render_template, request
 
 from backend import database
 from backend.auth import login_required
-from backend.comments import COMMENT_LIMIT, SECTION_LIMIT, SECTIONS
+from backend.comments import COMMENT_LIMIT, SECTION_LIMIT, SECTIONS, split_review
 from backend.permissions import require_owner
 
 bp = Blueprint("resumes", __name__)
@@ -67,7 +67,13 @@ def detail(resume_id):
     if resume is None:
         abort(404)
     comments = database.list_comments(resume_id)
-    return render_template("view_resume.html", resume=resume, comments=comments,
+    # Peer reviews still in template shape, for the side-by-side comparison.
+    reviews = []
+    for comment in comments:
+        parts = split_review(comment["content"])
+        if parts is not None and comment["author_id"] != resume["user_id"]:
+            reviews.append({"comment": comment, "parts": parts})
+    return render_template("view_resume.html", resume=resume, comments=comments, reviews=reviews,
                            ratings=database.list_ratings(resume_id),
                            comment_limit=COMMENT_LIMIT, sections=SECTIONS,
                            section_limit=SECTION_LIMIT)

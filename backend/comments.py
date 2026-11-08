@@ -39,6 +39,25 @@ def review_content(form):
     return "\n\n".join(f"{label}:\n{text}" for label, text in parts), None
 
 
+def split_review(content):
+    """Turn a template review back into {label: text}; None if it no longer has that shape.
+
+    Plain string search (no backtracking regex), so a crafted comment stays cheap to parse.
+    """
+    labels = [label for _, label, _ in SECTIONS]
+    first = f"{labels[0]}:\n"
+    if not content.startswith(first):
+        return None
+    parts, rest = {}, content[len(first):]
+    for label, next_label in zip(labels, labels[1:]):
+        text, separator, rest = rest.partition(f"\n\n{next_label}:\n")
+        if not separator:
+            return None
+        parts[label] = text
+    parts[labels[-1]] = rest
+    return parts
+
+
 @bp.post("/resumes/<int:resume_id>/comments")
 @login_required
 def create(resume_id):
