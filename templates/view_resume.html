@@ -17,7 +17,11 @@
         {% endif %}
         <h3 id="resume-heading">Resume</h3>
         <!-- Jinja escapes user text; CSS preserves line breaks. -->
-        <div class="resume-text">{{ resume.content }}</div>
+        <ol class="resume-text resume-lines">
+            {% for line in resume.content.splitlines() or [""] %}
+            <li id="line-{{ loop.index }}">{{ line }}</li>
+            {% endfor %}
+        </ol>
         {% if g.user.id == resume.user_id %}
         <p><a href="{{ url_for('resumes.edit', resume_id=resume.id) }}">Edit resume</a></p>
         <form method="post" action="{{ url_for('resumes.delete', resume_id=resume.id) }}">
@@ -35,7 +39,8 @@
             <li>
                 <article id="comment-{{ comment.id }}">
                     <p><a href="{{ url_for('ratings.reviewer', user_id=comment.author_id) }}">Member {{ comment.author_id }}</a>{% if comment.author_id == resume.user_id %} (resume owner){% endif %}
-                        — {{ comment.created_at }} (UTC)</p>
+                        — {{ comment.created_at }} (UTC)
+                        {% if comment.line_number %}· <a href="#line-{{ comment.line_number }}">On line {{ comment.line_number }}</a>{% endif %}</p>
                     <div class="comment-text">{{ comment.content }}</div>
                     {% if comment.id in ratings %}
                     <p>Owner rated this {{ "helpful" if ratings[comment.id] else "not helpful" }}.</p>
@@ -73,6 +78,11 @@
         <h3 id="write-comment-heading">Add feedback or a follow-up</h3>
         <form method="post" action="{{ url_for('comments.create', resume_id=resume.id) }}">
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            {% set reviewing = g.user.id != resume.user_id %}
+            <label for="line">Resume line {{ "(required)" if reviewing else "(optional)" }}</label>
+            <input id="line" name="line" type="number" min="1" max="{{ line_count }}" inputmode="numeric"
+                   aria-describedby="line-note" {{ "required" if reviewing }}>
+            <p id="line-note" class="note">The number shown next to the line in the resume (1 to {{ line_count }}).</p>
             <label for="comment">Your comment</label>
             <p id="comment-instructions" class="note">For useful feedback, identify the passage or problem,
                 explain why it matters, and suggest a concrete improvement. Questions and owner follow-ups are welcome.</p>

@@ -8,6 +8,11 @@
 {% if error %}<p role="alert">{{ error }}</p>{% endif %}
 <form method="post" action="{{ url_for('comments.edit', comment_id=comment.id) if comment else url_for('comments.create', resume_id=resume.id) }}">
     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    {% if not comment %}
+    <label for="line">Resume line {{ "(required)" if line_required else "(optional)" }}</label>
+    <input id="line" name="line" type="number" min="1" max="{{ line_count }}" value="{{ line }}"
+           inputmode="numeric" {{ "required" if line_required }}>
+    {% endif %}
     <label for="comment">Your comment</label>
     <textarea id="comment" name="comment" rows="5" maxlength="{{ comment_limit }}" required>{{ content }}</textarea>
     <p class="note">Up to {{ comment_limit }} characters. All authenticated members can read comments.</p>

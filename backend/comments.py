@@ -17,6 +17,21 @@ def comment_error(content):
     return None
 
 
+def line_count(resume):
+    """Number of lines shown, matching the numbered list on the resume page."""
+    return max(1, len(resume["content"].splitlines()))
+
+
+def line_error(value, resume, required):
+    """Parse the line number; return (number or None, error message or None)."""
+    if not value.strip():
+        return None, ("Choose the resume line your review is about." if required else None)
+    count = line_count(resume)
+    if not value.strip().isdigit() or not 1 <= int(value) <= count:
+        return None, f"Choose a line number from 1 to {count}."
+    return int(value), None
+
+
 @bp.post("/resumes/<int:resume_id>/comments")
 @login_required
 def create(resume_id):
@@ -25,11 +40,15 @@ def create(resume_id):
     if resume is None:
         abort(404)
     content = request.form.get("comment", "")
-    error = comment_error(content)
+    is_owner = resume["user_id"] == g.user["id"]
+    line_number, error = line_error(request.form.get("line", ""), resume, required=not is_owner)
+    error = comment_error(content) or error
     if error is not None:
         return render_template("comment_form.html", resume=resume, content=content,
-                               error=error, comment_limit=COMMENT_LIMIT, comment=None), 400
-    comment = database.create_comment(resume_id, g.user["id"], content)
+                               error=error, comment_limit=COMMENT_LIMIT, comment=None,
+                               line=request.form.get("line", ""), line_count=line_count(resume),
+                               line_required=not is_owner), 400
+    comment = database.create_comment(resume_id, g.user["id"], content, line_number)
     return redirect(url_for("resumes.detail", resume_id=resume_id,
                             _anchor=f"comment-{comment['id']}"), code=303)
 

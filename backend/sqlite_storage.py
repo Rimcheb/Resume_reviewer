@@ -185,13 +185,15 @@ def comment_data(comment):
     return {
         "id": comment.id, "resume_id": comment.resume_id, "author_id": comment.author_id,
         "content": comment.content, "created_at": comment.created_at,
+        "line_number": comment.line_number,
     }
 
 
-def create_comment(resume_id, author_id, content):
+def create_comment(resume_id, author_id, content, line_number=None):
     """Save a comment atomically; foreign keys require an existing resume and author."""
     db = get_db()
-    comment = Comment(resume_id=resume_id, author_id=author_id, content=content)
+    comment = Comment(resume_id=resume_id, author_id=author_id, content=content,
+                      line_number=line_number)
     db.add(comment)
     try:
         db.flush()
