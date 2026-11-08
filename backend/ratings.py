@@ -37,6 +37,20 @@ def save(comment_id):
                             _anchor=f"comment-{comment_id}"), code=303)
 
 
+@bp.post("/comments/<int:comment_id>/applied")
+@login_required
+def applied(comment_id):
+    """Let the resume owner mark advice they used, which the reviewer then sees."""
+    comment = ratable_comment(comment_id)
+    value = request.form.get("applied")
+    if value not in ("0", "1"):
+        return render_template("error.html", message="Choose applied or not applied."), 400
+    database.mark_applied(comment_id, int(value))
+    flash("Marked as applied." if value == "1" else "Applied mark removed.")
+    return redirect(url_for("resumes.detail", resume_id=comment["resume_id"],
+                            _anchor=f"comment-{comment_id}"), code=303)
+
+
 @bp.post("/comments/<int:comment_id>/rating/delete")
 @login_required
 def delete(comment_id):

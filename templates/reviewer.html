@@ -8,6 +8,7 @@
 {% else %}
 <p>Not rated yet.</p>
 {% endif %}
+<p>{{ reputation.applied }} suggestion{{ "" if reputation.applied == 1 else "s" }} applied by resume owners.</p>
 <p>Only the resume owner can rate another member's feedback.
     The percentage is helpful ratings divided by all ratings, rounded to a whole number.
     Unrated comments and self-comments do not count.</p>

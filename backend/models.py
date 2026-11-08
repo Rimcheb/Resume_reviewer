@@ -39,6 +39,7 @@ class Comment(Base):
     __tablename__ = "comments"
     id = Column(Integer, primary_key=True)
     resume_id = Column(Integer, ForeignKey("resumes.id"), nullable=False)
+    applied = Column(Integer, nullable=False, server_default="0")  # owner used this advice
     author_id = Column(Integer, ForeignKey("users.id"), nullable=False)
     content = Column(Text, nullable=False)
     created_at = Column(Text, nullable=False, server_default=func.current_timestamp())
