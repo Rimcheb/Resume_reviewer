@@ -3,3 +3,4 @@ SQLAlchemy==2.0.56
 Flask-WTF==1.2.2
 email-validator==2.3.0
 waitress==3.0.2
+psycopg[binary]==3.2.13

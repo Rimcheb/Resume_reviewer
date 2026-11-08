@@ -4,12 +4,13 @@ import click
 from flask import current_app, g
 from flask.cli import with_appcontext
 from sqlalchemy import create_engine, event, inspect, select, func, delete
-from sqlalchemy.engine import URL
+from sqlalchemy.engine import URL, make_url
 from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 from sqlalchemy.orm import Session
 from sqlalchemy.pool import NullPool
 from backend.models import Base, Comment, Resume, User
-from sqlalchemy.dialects.sqlite import insert
+from sqlalchemy.dialects.sqlite import insert as sqlite_insert
+from sqlalchemy.dialects.postgresql import insert as postgres_insert
 from backend.models import CommentRating
 from backend.sqlite_upgrade import SCHEMA_VERSION, upgrade_db_command
 from backend.sqlite_upgrade import backup_db_command
@@ -44,13 +45,15 @@ def close_db(error=None):
 
 def init_db():
     """Create the model tables atomically, only when no tables exist."""
-    Path(current_app.config["DATABASE"]).parent.mkdir(parents=True, exist_ok=True)
     engine = current_app.extensions["database_engine"]
+    if engine.dialect.name == "sqlite":
+        Path(current_app.config["DATABASE"]).parent.mkdir(parents=True, exist_ok=True)
     with engine.begin() as connection:
         if inspect(connection).get_table_names():
             raise click.ClickException("Database already has tables. Nothing was changed.")
         Base.metadata.create_all(connection)
-        connection.exec_driver_sql(f"PRAGMA user_version = {SCHEMA_VERSION}")
+        if engine.dialect.name == "sqlite":
+            connection.exec_driver_sql(f"PRAGMA user_version = {SCHEMA_VERSION}")
 
 
 @click.command("init-db")
@@ -62,16 +65,24 @@ def init_db_command():
 
 
 def init_app(app):
-    """Configure SQLite connections and register cleanup and setup."""
-    url = URL.create("sqlite", database=str(Path(app.config["DATABASE"]).resolve()))
-    engine = create_engine(url, poolclass=NullPool, hide_parameters=True)
-    event.listen(engine, "connect", configure_connection)
-    event.listen(engine, "begin", begin_transaction)
+    """Use Postgres when configured, otherwise keep the local SQLite setup."""
+    if app.config["DATABASE_URL"]:
+        url = make_url(app.config["DATABASE_URL"])
+        if url.get_backend_name() not in {"postgres", "postgresql"}:
+            raise RuntimeError("DATABASE_URL must point to Postgres.")
+        url = url.set(drivername="postgresql+psycopg")
+        engine = create_engine(url, poolclass=NullPool, hide_parameters=True,
+                               connect_args={"prepare_threshold": None})
+    else:
+        url = URL.create("sqlite", database=str(Path(app.config["DATABASE"]).resolve()))
+        engine = create_engine(url, poolclass=NullPool, hide_parameters=True)
+        event.listen(engine, "connect", configure_connection)
+        event.listen(engine, "begin", begin_transaction)
+        app.cli.add_command(upgrade_db_command)
+        app.cli.add_command(backup_db_command)
     app.extensions["database_engine"] = engine
     app.teardown_appcontext(close_db)
     app.cli.add_command(init_db_command)
-    app.cli.add_command(upgrade_db_command)
-    app.cli.add_command(backup_db_command)
 
 
 def user_data(user):
@@ -167,9 +178,11 @@ def list_resumes(user_id=None, target_field="", limit=10, offset=0):
     if user_id is not None:
         query = query.where(Resume.user_id == user_id)
     if target_field:
-        field = func.lowercase(Resume.target_field)
-        # instr finds literal text, including % and _, and returns 0 if absent.
-        query = query.where(func.instr(field, target_field.lower()) > 0)
+        if get_db().get_bind().dialect.name == "postgresql":
+            match = func.strpos(func.lower(Resume.target_field), func.lower(target_field))
+        else:
+            match = func.instr(func.lowercase(Resume.target_field), target_field.lower())
+        query = query.where(match > 0)
     query = query.order_by(Resume.created_at.desc(), Resume.id.desc())
     rows = get_db().execute(query.limit(limit).offset(offset)).all()
     records = []
@@ -287,6 +300,7 @@ def delete_comment(comment_id):
 def save_rating(comment_id, rater_id, helpful):
     """Use the unique key to insert or update one rating in a single statement."""
     db = get_db()
+    insert = postgres_insert if db.get_bind().dialect.name == "postgresql" else sqlite_insert
     statement = insert(CommentRating).values(
         comment_id=comment_id, rater_id=rater_id, helpful=helpful
     )
@@ -345,11 +359,13 @@ def get_reputation(user_id):
 
 def is_ready():
     """Check the database file, schema version and mapped columns without writing."""
-    if not Path(current_app.config["DATABASE"]).is_file():
+    engine = current_app.extensions["database_engine"]
+    sqlite = engine.dialect.name == "sqlite"
+    if sqlite and not Path(current_app.config["DATABASE"]).is_file():
         return False
     try:
-        with current_app.extensions["database_engine"].connect() as connection:
-            if connection.exec_driver_sql("PRAGMA user_version").scalar() != SCHEMA_VERSION:
+        with engine.connect() as connection:
+            if sqlite and connection.exec_driver_sql("PRAGMA user_version").scalar() != SCHEMA_VERSION:
                 return False
             for table in Base.metadata.sorted_tables:
                 connection.execute(select(table).limit(0))

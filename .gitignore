@@ -5,3 +5,5 @@ instance/
 *.sqlite
 *.sqlite-*
 .env
+.env.*
+.vercel/

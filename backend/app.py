@@ -37,6 +37,7 @@ def create_app(config=None):
         "DATABASE_PATH", os.path.join(application.instance_path, "resume_reviewer.sqlite")
     )
     application.config.update(
+        DATABASE_URL=os.getenv("DATABASE_URL"),
         SECRET_KEY=os.getenv("SECRET_KEY"),
         STORAGE_BACKEND=sqlite_storage,
         SESSION_COOKIE_HTTPONLY=True,
@@ -49,6 +50,9 @@ def create_app(config=None):
 
     if not application.config["SECRET_KEY"]:
         raise RuntimeError("Set SECRET_KEY before starting the app.")
+
+    if os.getenv("VERCEL") and not application.config["DATABASE_URL"]:
+        raise RuntimeError("Set DATABASE_URL to a persistent Postgres database on Vercel.")
 
     database.init_app(application)
     CSRFProtect(application)
