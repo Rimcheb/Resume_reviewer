@@ -8,10 +8,11 @@ from flask import current_app
 from flask.cli import with_appcontext
 from sqlalchemy import inspect
 from sqlalchemy.exc import SQLAlchemyError
+from sqlalchemy.schema import CreateColumn
 
-from backend.models import Comment, CommentRating, Resume
+from backend.models import Base
 
-SCHEMA_VERSION = 2
+SCHEMA_VERSION = 3
 
 
 def backup_database(connection, backup_path):
@@ -26,11 +27,18 @@ def backup_database(connection, backup_path):
         backup.close()
 
 
-def missing_indexes(connection):
-    """Find model indexes that have not yet been added to this database."""
+def existing_tables(connection):
+    """Pair each model table that already exists with the inspector that found it."""
     inspector = inspect(connection)
+    names = inspector.get_table_names()
+    return inspector, [table for table in Base.metadata.sorted_tables if table.name in names]
+
+
+def missing_indexes(connection):
+    """Find model indexes on existing tables that the database does not have yet."""
+    inspector, tables = existing_tables(connection)
     missing = []
-    for table in (Resume.__table__, Comment.__table__):
+    for table in tables:
         existing_names = [index["name"] for index in inspector.get_indexes(table.name)]
         for index in table.indexes:
             if index.name not in existing_names:
@@ -38,8 +46,20 @@ def missing_indexes(connection):
     return missing
 
 
+def missing_columns(connection):
+    """Find model columns that existing tables do not have yet."""
+    inspector, tables = existing_tables(connection)
+    missing = []
+    for table in tables:
+        existing_names = [column["name"] for column in inspector.get_columns(table.name)]
+        for column in table.columns:
+            if column.name not in existing_names:
+                missing.append(column)
+    return missing
+
+
 def upgrade_db(backup_path):
-    """Back up once, then add missing context columns and indexes atomically."""
+    """Back up once, then add missing tables, columns and indexes atomically."""
     if not Path(current_app.config["DATABASE"]).is_file():
         raise click.ClickException("Database does not exist. Use init-db for first setup.")
     engine = current_app.extensions["database_engine"]
@@ -47,30 +67,25 @@ def upgrade_db(backup_path):
         version = connection.exec_driver_sql("PRAGMA user_version").scalar()
         if version > SCHEMA_VERSION:
             raise click.ClickException("Database is newer than this app. Use the matching app version.")
-        inspector = inspect(connection)
-        tables = inspector.get_table_names()
+        tables = inspect(connection).get_table_names()
         if not all(table in tables for table in ("users", "resumes", "comments")):
             raise click.ClickException("Expected the existing users, resumes, and comments tables.")
-        columns = [column["name"] for column in inspector.get_columns("resumes")]
+        columns = missing_columns(connection)
         indexes = missing_indexes(connection)
-        if ("target_field" in columns and "feedback_request" in columns and not indexes
-                and "comment_ratings" in tables and version == SCHEMA_VERSION):
+        new_tables = [table for table in Base.metadata.sorted_tables if table.name not in tables]
+        if not columns and not indexes and not new_tables and version == SCHEMA_VERSION:
             return False
 
         backup_database(connection, backup_path)
 
-        # create_all cannot add columns. Fixed ALTER statements preserve old rows.
-        if "target_field" not in columns:
-            connection.exec_driver_sql(
-                "ALTER TABLE resumes ADD COLUMN target_field TEXT NOT NULL DEFAULT ''"
-            )
-        if "feedback_request" not in columns:
-            connection.exec_driver_sql(
-                "ALTER TABLE resumes ADD COLUMN feedback_request TEXT NOT NULL DEFAULT ''"
-            )
+        # create_all cannot add columns to existing tables, so ALTER adds each one from
+        # its model definition. A new NOT NULL column therefore needs a server_default.
+        for column in columns:
+            definition = CreateColumn(column).compile(dialect=connection.dialect)
+            connection.exec_driver_sql(f"ALTER TABLE {column.table.name} ADD COLUMN {definition}")
+        Base.metadata.create_all(connection)  # new tables, with their indexes
         for index in indexes:
             index.create(connection)
-        CommentRating.__table__.create(connection, checkfirst=True)
         connection.exec_driver_sql(f"PRAGMA user_version = {SCHEMA_VERSION}")
     return True
 

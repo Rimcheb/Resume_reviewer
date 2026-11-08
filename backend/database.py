@@ -96,6 +96,16 @@ def get_reputation(user_id):
     return current_app.extensions["storage"].get_reputation(user_id)
 
 
+def record_review_credit(reviewer_id, resume_id):
+    """Record a review of someone else's resume; repeats on the same resume are ignored."""
+    return current_app.extensions["storage"].record_review_credit(reviewer_id, resume_id)
+
+
+def review_balance(user_id):
+    """Return {"given": resumes reviewed for others, "posted": resumes submitted}."""
+    return current_app.extensions["storage"].review_balance(user_id)
+
+
 def is_ready():
     """Return whether the selected storage is available and has the current schema."""
     return current_app.extensions["storage"].is_ready()

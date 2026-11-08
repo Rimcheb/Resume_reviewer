@@ -50,6 +50,20 @@ class Comment(Base):
     )
 
 
+class ReviewCredit(Base):
+    """A resume this member reviewed for someone else; earns them one resume post.
+
+    resume_id has no foreign key on purpose: the credit stays when the owner later
+    deletes the resume (and with it the review).
+    """
+
+    __tablename__ = "review_credits"
+    id = Column(Integer, primary_key=True)
+    reviewer_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    resume_id = Column(Integer, nullable=False)
+    __table_args__ = (UniqueConstraint("reviewer_id", "resume_id"),)
+
+
 class CommentRating(Base):
     """One owner's helpfulness decision about a peer's comment."""
 

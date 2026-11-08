@@ -27,6 +27,21 @@ def submission_error(content, target_field, feedback_request):
     return None
 
 
+def resumes_allowed(user_id):
+    """How many more resumes this member may post: 1 free, then 1 per review given.
+
+    Survey: most people would give one review per review received, and about 50
+    reviews were offered for 30 needed, so a 1:1 exchange has a buffer.
+    ponytail: extra reviews only bank more posts; priority matching for them can come later.
+    """
+    balance = database.review_balance(user_id)
+    return max(0, balance["given"] + 1 - balance["posted"])
+
+
+NEED_REVIEW = ("Review someone else's resume first. Each resume you review lets you post one "
+               "more of your own. Use Browse resumes above to find one.")
+
+
 def submission_form(content="", target_field="", feedback_request="", error=None, resume=None):
     """Keep form values and limits together for initial display and errors."""
     return render_template(
@@ -40,6 +55,8 @@ def submission_form(content="", target_field="", feedback_request="", error=None
 @login_required
 def new():
     """Show the existing submission form with a privacy explanation."""
+    if resumes_allowed(g.user["id"]) == 0:
+        return render_template("error.html", message=NEED_REVIEW), 403
     return submission_form()
 
 
@@ -47,6 +64,8 @@ def new():
 @login_required
 def create():
     """Save text under the signed-in user's ID and open its detail page."""
+    if resumes_allowed(g.user["id"]) == 0:
+        return render_template("error.html", message=NEED_REVIEW), 403
     content = request.form.get("resume", "")
     target_field = request.form.get("target_field", "")
     feedback_request = request.form.get("feedback_request", "")
