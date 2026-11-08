@@ -42,12 +42,28 @@ class Comment(Base):
     author_id = Column(Integer, ForeignKey("users.id"), nullable=False)
     content = Column(Text, nullable=False)
     created_at = Column(Text, nullable=False, server_default=func.current_timestamp())
+    review_seconds = Column(Integer)  # time from opening the resume to posting; None for follow-ups
     __table_args__ = (
         CheckConstraint(func.length(func.trim(content)) > 0),
         Index("ix_comments_resume_author", "resume_id", "author_id"),
         Index("ix_comments_resume_created_id", "resume_id", "created_at", "id"),
         Index("ix_comments_author_id", "author_id", "id"),
     )
+
+
+class ReviewStart(Base):
+    """When a member first opened a resume to review it; removed once the review is posted.
+
+    Kept on the server, not in the session cookie, so an old cookie cannot be replayed
+    to skip the minimum review time.
+    """
+
+    __tablename__ = "review_starts"
+    id = Column(Integer, primary_key=True)
+    resume_id = Column(Integer, ForeignKey("resumes.id"), nullable=False)
+    reviewer_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    started_at = Column(Integer, nullable=False)  # Unix seconds
+    __table_args__ = (UniqueConstraint("resume_id", "reviewer_id"),)
 
 
 class CommentRating(Base):

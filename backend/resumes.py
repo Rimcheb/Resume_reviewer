@@ -1,10 +1,13 @@
 """Validate resume submissions and serve pages for authenticated members."""
 
+import time
+
 from flask import Blueprint, abort, flash, g, redirect, render_template, request, url_for
 
 from backend import database
 from backend.auth import login_required
-from backend.comments import COMMENT_LIMIT
+from backend.comments import (COMMENT_LIMIT, DEEP_REVIEW_SECONDS, MIN_REVIEW_SECONDS,
+                              TARGET_REVIEW_SECONDS, review_started)
 from backend.permissions import require_owner
 
 bp = Blueprint("resumes", __name__)
@@ -67,9 +70,14 @@ def detail(resume_id):
     if resume is None:
         abort(404)
     comments = database.list_comments(resume_id)
+    elapsed = None
+    if g.user["id"] != resume["user_id"]:
+        elapsed = int(time.time()) - review_started(resume_id)
     return render_template("view_resume.html", resume=resume, comments=comments,
                            ratings=database.list_ratings(resume_id),
-                           comment_limit=COMMENT_LIMIT)
+                           comment_limit=COMMENT_LIMIT, elapsed=elapsed,
+                           min_review=MIN_REVIEW_SECONDS, target_review=TARGET_REVIEW_SECONDS,
+                           deep_review=DEEP_REVIEW_SECONDS)
 
 
 @bp.route("/resumes/<int:resume_id>/edit", methods=["GET", "POST"])

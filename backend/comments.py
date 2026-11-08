@@ -1,5 +1,8 @@
 """Validate and save feedback from authenticated members."""
 
+import math
+import time
+
 from flask import Blueprint, abort, flash, g, redirect, render_template, request, url_for
 
 from backend import database
@@ -8,6 +11,22 @@ from backend.permissions import require_owner
 
 bp = Blueprint("comments", __name__)
 COMMENT_LIMIT = 5000
+
+# Survey: most people expect about 15 minutes per review; 5 filters out drive-by reviews.
+MIN_REVIEW_SECONDS = 5 * 60
+TARGET_REVIEW_SECONDS = 15 * 60
+DEEP_REVIEW_SECONDS = 30 * 60
+
+
+def review_started(resume_id):
+    """Record (once) when the signed-in reviewer opened this resume, and return it."""
+    return database.start_review(resume_id, g.user["id"], int(time.time()))
+
+
+def review_seconds(resume_id):
+    """Seconds since the signed-in reviewer opened the resume, or None if they never did."""
+    started = database.get_review_start(resume_id, g.user["id"])
+    return None if started is None else int(time.time()) - started
 
 
 def comment_error(content):
@@ -26,10 +45,21 @@ def create(resume_id):
         abort(404)
     content = request.form.get("comment", "")
     error = comment_error(content)
+    spent = None
+    if error is None and resume["user_id"] != g.user["id"]:
+        spent = review_seconds(resume_id)
+        if spent is None:
+            error = "Open the resume page and read it before posting a review."
+        elif spent < MIN_REVIEW_SECONDS:
+            minutes = math.ceil((MIN_REVIEW_SECONDS - spent) / 60)
+            error = (f"Reviews need at least {MIN_REVIEW_SECONDS // 60} minutes. "
+                     f"Take about {minutes} more minute{'s' if minutes > 1 else ''}, then post again.")
     if error is not None:
         return render_template("comment_form.html", resume=resume, content=content,
                                error=error, comment_limit=COMMENT_LIMIT, comment=None), 400
-    comment = database.create_comment(resume_id, g.user["id"], content)
+    comment = database.create_comment(resume_id, g.user["id"], content, spent)
+    if spent is not None:
+        database.finish_review(resume_id, g.user["id"])
     return redirect(url_for("resumes.detail", resume_id=resume_id,
                             _anchor=f"comment-{comment['id']}"), code=303)
 

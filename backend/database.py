@@ -41,9 +41,11 @@ def list_resumes(user_id=None, target_field="", limit=10, offset=0):
     return current_app.extensions["storage"].list_resumes(user_id, target_field, limit, offset)
 
 
-def create_comment(resume_id, author_id, content):
+def create_comment(resume_id, author_id, content, review_seconds=None):
     """Save validated comment text and return a plain comment record."""
-    return current_app.extensions["storage"].create_comment(resume_id, author_id, content)
+    return current_app.extensions["storage"].create_comment(
+        resume_id, author_id, content, review_seconds
+    )
 
 
 def list_comments(resume_id):
@@ -59,6 +61,21 @@ def get_comment_by_id(comment_id):
 def update_resume(resume_id, content, target_field, feedback_request):
     """Update validated fields after an ownership check; return False if missing."""
     return current_app.extensions["storage"].update_resume(resume_id, content, target_field, feedback_request)
+
+
+def start_review(resume_id, reviewer_id, now):
+    """Record when this reviewer first opened the resume (Unix seconds) and return it."""
+    return current_app.extensions["storage"].start_review(resume_id, reviewer_id, now)
+
+
+def get_review_start(resume_id, reviewer_id):
+    """Return when this reviewer opened the resume, or None."""
+    return current_app.extensions["storage"].get_review_start(resume_id, reviewer_id)
+
+
+def finish_review(resume_id, reviewer_id):
+    """Forget the start time once the review is posted."""
+    return current_app.extensions["storage"].finish_review(resume_id, reviewer_id)
 
 
 def delete_resume(resume_id):
