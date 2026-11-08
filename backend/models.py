@@ -19,6 +19,8 @@ class User(Base):
     id = Column(Integer, primary_key=True)
     email = Column(Text, nullable=False, unique=True)
     password_hash = Column(Text, nullable=False)
+    # Fields from FIELDS this member can review, one per line (a short, fixed list).
+    review_fields = Column(Text, nullable=False, server_default="")
     __table_args__ = (CheckConstraint(func.length(func.trim(email)) > 0),)
 
 

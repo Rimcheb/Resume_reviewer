@@ -2,7 +2,13 @@
 {% block title %}{{ "My Resumes" if is_mine else "Browse Resumes" }} | Resume Reviewer{% endblock %}
 {% block content %}
 <h2>{{ "My Resumes" if is_mine else "Browse Resumes" }}</h2>
-<p>Newest submissions appear first. Choose a request in a field you can help with.</p>
+{% if preferred %}
+<p>Resumes in your fields ({{ preferred|join(", ") }}) appear first, newest first. Others follow.
+    <a href="{{ url_for('auth.account') }}">Change your fields</a></p>
+{% else %}
+<p>Newest submissions appear first. Choose a request in a field you can help with.
+    {% if not is_mine and not g.user.review_fields %}<a href="{{ url_for('auth.account') }}">Pick the fields you can review</a> to see those first.{% endif %}</p>
+{% endif %}
 <form method="get" action="{{ url_for(endpoint) }}">
     <label for="field">Filter by target field</label>
     <select id="field" name="field">
@@ -17,6 +23,9 @@
 {% for resume in resumes %}
 <article>
     <h3><a href="{{ url_for('resumes.detail', resume_id=resume.id) }}">{{ resume.target_field or "Resume" }} #{{ resume.id }}</a></h3>
+    {% if preferred %}
+    <p class="note">{{ "In your fields" if resume.target_field in preferred else "Outside your fields" }}</p>
+    {% endif %}
     <p>Submitted {{ resume.created_at }} (UTC)</p>
     <p>{{ "Peer feedback received" if resume.has_peer_feedback else "Awaiting peer feedback" }}</p>
     {% if resume.feedback_request %}
