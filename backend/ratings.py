@@ -37,6 +37,21 @@ def save(comment_id):
                             _anchor=f"comment-{comment_id}"), code=303)
 
 
+@bp.post("/comments/<int:comment_id>/specificity")
+@login_required
+def specificity(comment_id):
+    """Record whether rated feedback was specific or vague (survey: 71% value specific feedback)."""
+    comment = ratable_comment(comment_id)
+    specific = request.form.get("specific")
+    if specific not in ("0", "1"):
+        return render_template("error.html", message="Choose specific or vague."), 400
+    if not database.save_specificity(comment_id, g.user["id"], int(specific)):
+        return render_template("error.html", message="Rate whether it was helpful first."), 400
+    flash("Feedback rating saved.")
+    return redirect(url_for("resumes.detail", resume_id=comment["resume_id"],
+                            _anchor=f"comment-{comment_id}"), code=303)
+
+
 @bp.post("/comments/<int:comment_id>/rating/delete")
 @login_required
 def delete(comment_id):

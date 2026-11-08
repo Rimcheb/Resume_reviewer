@@ -301,6 +301,23 @@ def save_rating(comment_id, rater_id, helpful):
         raise
 
 
+def save_specificity(comment_id, rater_id, specific):
+    """Add a specific/vague decision to an existing rating; False if there is none yet."""
+    db = get_db()
+    rating = db.scalar(select(CommentRating).where(
+        CommentRating.comment_id == comment_id, CommentRating.rater_id == rater_id
+    ))
+    if rating is None:
+        return False
+    rating.specific = specific
+    try:
+        db.commit()
+    except SQLAlchemyError:
+        db.rollback()
+        raise
+    return True
+
+
 def delete_rating(comment_id, rater_id):
     """Delete only the authorized owner's rating, in one transaction."""
     db = get_db()
@@ -327,20 +344,28 @@ def list_ratings(resume_id):
     query = eligible_ratings().where(Resume.id == resume_id)
     ratings = {}
     for rating in get_db().scalars(query):
-        ratings[rating.comment_id] = rating.helpful
+        ratings[rating.comment_id] = {"helpful": rating.helpful, "specific": rating.specific}
     return ratings
 
 
 def get_reputation(user_id):
     """Derive counts in SQL so changes and deletions cannot leave stale totals."""
     query = eligible_ratings().where(Comment.author_id == user_id)
-    query = query.with_only_columns(func.sum(CommentRating.helpful), func.count(CommentRating.id))
-    helpful, total = get_db().execute(query).one()
-    helpful = helpful or 0
-    percentage = None
-    if total:
-        percentage = round(100 * helpful / total)
-    return {"helpful": helpful, "total": total, "percentage": percentage}
+    query = query.with_only_columns(
+        func.sum(CommentRating.helpful), func.count(CommentRating.id),
+        func.sum(CommentRating.specific), func.count(CommentRating.specific),
+    )
+    helpful, total, specific, specific_total = get_db().execute(query).one()
+    return {
+        "helpful": helpful or 0, "total": total, "percentage": percent(helpful, total),
+        "specific": specific or 0, "specific_total": specific_total,
+        "specific_percentage": percent(specific, specific_total),
+    }
+
+
+def percent(part, whole):
+    """Whole-number percentage, or None when nothing was rated."""
+    return round(100 * (part or 0) / whole) if whole else None
 
 
 def is_ready():

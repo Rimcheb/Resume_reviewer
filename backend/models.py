@@ -58,6 +58,7 @@ class CommentRating(Base):
     comment_id = Column(Integer, ForeignKey("comments.id"), nullable=False)
     rater_id = Column(Integer, ForeignKey("users.id"), nullable=False)
     helpful = Column(Integer, nullable=False)
+    specific = Column(Integer)  # 1 specific, 0 vague, None not rated yet
     __table_args__ = (
         CheckConstraint("helpful IN (0, 1)"),
         UniqueConstraint("comment_id", "rater_id"),

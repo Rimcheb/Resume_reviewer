@@ -81,18 +81,23 @@ def save_rating(comment_id, rater_id, helpful):
     return current_app.extensions["storage"].save_rating(comment_id, rater_id, helpful)
 
 
+def save_specificity(comment_id, rater_id, specific):
+    """Save 1 (specific) or 0 (vague) on this owner's existing rating; False if unrated."""
+    return current_app.extensions["storage"].save_specificity(comment_id, rater_id, specific)
+
+
 def delete_rating(comment_id, rater_id):
     """Remove this owner's rating after permission checks; absence is harmless."""
     return current_app.extensions["storage"].delete_rating(comment_id, rater_id)
 
 
 def list_ratings(resume_id):
-    """Return eligible owner ratings as a dictionary of comment ID to 0 or 1."""
+    """Map comment ID to {"helpful": 0 or 1, "specific": 0, 1 or None} for eligible ratings."""
     return current_app.extensions["storage"].list_ratings(resume_id)
 
 
 def get_reputation(user_id):
-    """Return helpful, total and percentage; an unrated percentage is None."""
+    """Return helpful and specific counts and percentages; unrated percentages are None."""
     return current_app.extensions["storage"].get_reputation(user_id)
 
 
