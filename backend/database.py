@@ -71,6 +71,11 @@ def update_comment(comment_id, content):
     return current_app.extensions["storage"].update_comment(comment_id, content)
 
 
+def flag_exaggeration(comment_id, flagged):
+    """Set (1) or clear (0) the owner's exaggeration flag after permission checks."""
+    return current_app.extensions["storage"].flag_exaggeration(comment_id, flagged)
+
+
 def delete_comment(comment_id):
     """After an authorship check, delete a comment; return False if missing."""
     return current_app.extensions["storage"].delete_comment(comment_id)

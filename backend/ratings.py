@@ -48,6 +48,20 @@ def delete(comment_id):
                             _anchor=f"comment-{comment_id}"), code=303)
 
 
+@bp.post("/comments/<int:comment_id>/exaggeration")
+@login_required
+def exaggeration(comment_id):
+    """Let the resume owner flag advice that pushes them to exaggerate, or clear the flag."""
+    comment = ratable_comment(comment_id)
+    flagged = request.form.get("flagged")
+    if flagged not in ("0", "1"):
+        return render_template("error.html", message="Choose to flag or clear the flag."), 400
+    database.flag_exaggeration(comment_id, int(flagged))
+    flash("Flag saved." if flagged == "1" else "Flag removed.")
+    return redirect(url_for("resumes.detail", resume_id=comment["resume_id"],
+                            _anchor=f"comment-{comment_id}"), code=303)
+
+
 @bp.get("/reviewers/<int:user_id>")
 @login_required
 def reviewer(user_id):
