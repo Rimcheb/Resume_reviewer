@@ -1,11 +1,13 @@
 """Validate resume submissions and serve pages for authenticated members."""
 
+import secrets
+
 from flask import Blueprint, abort, flash, g, redirect, render_template, request, url_for
 
 from backend import database
 from backend.auth import login_required
 from backend.comments import COMMENT_LIMIT
-from backend.permissions import require_owner
+from backend.permissions import grant_shared_view, require_owner, require_viewer
 
 bp = Blueprint("resumes", __name__)
 
@@ -25,6 +27,13 @@ def submission_error(content, target_field, feedback_request):
     if len(feedback_request) > FEEDBACK_LIMIT:
         return f"Keep your feedback request within {FEEDBACK_LIMIT:,} characters."
     return None
+
+
+def chosen_share_token(current=None):
+    """Keep (or create) a share token when Private is ticked; None makes the resume public."""
+    if request.form.get("private") != "1":
+        return None
+    return current or secrets.token_urlsafe(16)
 
 
 def submission_form(content="", target_field="", feedback_request="", error=None, resume=None):
@@ -54,7 +63,8 @@ def create():
     if error is not None:
         return submission_form(content, target_field, feedback_request, error), 400
     resume = database.create_resume(
-        g.user["id"], content, target_field.strip(), feedback_request
+        g.user["id"], content, target_field.strip(), feedback_request,
+        share_token=chosen_share_token(),
     )
     return redirect(url_for("resumes.detail", resume_id=resume["id"]), code=303)
 
@@ -66,6 +76,7 @@ def detail(resume_id):
     resume = database.get_resume_by_id(resume_id)
     if resume is None:
         abort(404)
+    require_viewer(resume)
     comments = database.list_comments(resume_id)
     return render_template("view_resume.html", resume=resume, comments=comments,
                            ratings=database.list_ratings(resume_id),
@@ -87,13 +98,25 @@ def edit(resume_id):
         error = submission_error(content, target_field, feedback_request)
         if error is not None:
             return submission_form(content, target_field, feedback_request, error, resume), 400
-        changed = database.update_resume(resume_id, content, target_field.strip(), feedback_request)
+        changed = database.update_resume(resume_id, content, target_field.strip(), feedback_request,
+                                         share_token=chosen_share_token(resume["share_token"]))
         if not changed:
             abort(404)
         flash("Resume updated. Existing comments were kept.")
         return redirect(url_for("resumes.detail", resume_id=resume_id), code=303)
     return submission_form(resume["content"], resume["target_field"],
                            resume["feedback_request"], resume=resume)
+
+
+@bp.get("/r/<token>")
+@login_required
+def shared(token):
+    """Open a private resume from its share link and remember access in this browser."""
+    resume = database.get_resume_by_token(token) if len(token) <= 64 else None
+    if resume is None:
+        abort(404)
+    grant_shared_view(token)
+    return redirect(url_for("resumes.detail", resume_id=resume["id"]))
 
 
 @bp.post("/resumes/<int:resume_id>/delete")
