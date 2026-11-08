@@ -70,18 +70,26 @@
     </section>
 
     <section class="comment-form-section" aria-labelledby="write-comment-heading">
-        <h3 id="write-comment-heading">Add feedback or a follow-up</h3>
+        {% if g.user.id == resume.user_id %}
+        <h3 id="write-comment-heading">Add a follow-up</h3>
         <form method="post" action="{{ url_for('comments.create', resume_id=resume.id) }}">
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-            <label for="comment">Your comment</label>
-            <p id="comment-instructions" class="note">For useful feedback, identify the passage or problem,
-                explain why it matters, and suggest a concrete improvement. Questions and owner follow-ups are welcome.</p>
+            <label for="comment">Your follow-up</label>
+            <p id="comment-instructions" class="note">Reply to reviewers or ask a question about their feedback.</p>
             <textarea id="comment" name="comment" rows="6" maxlength="{{ comment_limit }}" required
-                aria-describedby="comment-instructions comment-limit"
-                placeholder="For example, add a measurable result to your most recent role."></textarea>
+                aria-describedby="comment-instructions comment-limit"></textarea>
             <p id="comment-limit" class="note">Up to {{ comment_limit }} characters. All authenticated members can read comments.</p>
-            <button type="submit">Post comment</button>
+            <button type="submit">Post follow-up</button>
         </form>
+        {% else %}
+        <h3 id="write-comment-heading">Write a review</h3>
+        <form method="post" action="{{ url_for('comments.create', resume_id=resume.id) }}">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            {% include "review_sections.html" %}
+            <p class="note">All authenticated members can read reviews.</p>
+            <button type="submit">Post review</button>
+        </form>
+        {% endif %}
     </section>
 </div>
 {% endblock %}
