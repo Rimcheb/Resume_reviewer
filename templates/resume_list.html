@@ -2,7 +2,7 @@
 {% block title %}{{ "My Resumes" if is_mine else "Browse Resumes" }} | Resume Reviewer{% endblock %}
 {% block content %}
 <h2>{{ "My Resumes" if is_mine else "Browse Resumes" }}</h2>
-<p>Newest submissions appear first. Choose a request in a field you can help with.</p>
+<p>{{ "Manage your résumés and check feedback. Newest submissions appear first." if is_mine else "Newest submissions appear first. Choose a request in a field you can help with." }}</p>
 <form method="get" action="{{ url_for(endpoint) }}">
     <label for="field">Filter by target role or field</label>
     <input id="field" name="field" value="{{ target_field }}" maxlength="{{ field_limit }}">
@@ -11,7 +11,7 @@
 </form>
 {% for resume in resumes %}
 <article>
-    <h3><a href="{{ url_for('resumes.detail', resume_id=resume.id) }}">{{ resume.target_field or "Resume" }} #{{ resume.id }}</a></h3>
+    <h3><a href="{{ url_for('resumes.detail', resume_id=resume.id, return_to=url_for(endpoint, page=page, field=target_field)) }}">{{ resume.target_field or "Resume" }} #{{ resume.id }}</a></h3>
     {% if resume.user_id == g.user.id %}<p><strong>Your résumé</strong></p>{% endif %}
     <p>Submitted {{ resume.created_at }} (UTC)</p>
     <p>{{ "Peer feedback received" if resume.has_peer_feedback else "Awaiting peer feedback" }}</p>

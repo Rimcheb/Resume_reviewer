@@ -1,5 +1,7 @@
 """Validate resume submissions and serve pages for authenticated members."""
 
+from urllib.parse import urlsplit, parse_qs
+
 from flask import Blueprint, abort, flash, g, redirect, render_template, request, url_for
 
 from backend import database
@@ -69,7 +71,7 @@ def detail(resume_id):
     comments = database.list_comments(resume_id)
     return render_template("view_resume.html", resume=resume, comments=comments,
                            ratings=database.list_ratings(resume_id),
-                           comment_limit=COMMENT_LIMIT)
+                           comment_limit=COMMENT_LIMIT, **list_return_context())
 
 
 @bp.route("/resumes/<int:resume_id>/edit", methods=["GET", "POST"])
@@ -144,3 +146,23 @@ def feed():
 def mine():
     """Show only submissions owned by the signed-in user."""
     return resume_list(g.user["id"])
+
+
+def list_return_context():
+    """Rebuild Back destinations from known list routes and bounded parameters."""
+    fallback = {"back_url": url_for("resumes.feed"), "back_label": "Back to Browse"}
+    value = request.args.get("return_to", "")
+    try:
+        parts = urlsplit(value)
+        if parts.scheme or parts.netloc or parts.fragment or parts.path not in ("/resumes", "/my-resumes"):
+            return fallback
+        query = parse_qs(parts.query)
+        page = int(query.get("page", ["1"])[0])
+        field = query.get("field", [""])[0]
+        if not 1 <= page <= MAX_PAGE or len(field) > FIELD_LIMIT:
+            return fallback
+    except ValueError:
+        return fallback
+    endpoint = "resumes.mine" if parts.path == "/my-resumes" else "resumes.feed"
+    return {"back_url": url_for(endpoint, page=page, field=field),
+            "back_label": "Back to My Résumés" if endpoint == "resumes.mine" else "Back to Browse"}
