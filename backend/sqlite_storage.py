@@ -10,7 +10,7 @@ from sqlalchemy.orm import Session
 from sqlalchemy.pool import NullPool
 from backend.models import Base, Comment, Resume, User
 from sqlalchemy.dialects.sqlite import insert
-from backend.models import CommentRating
+from backend.models import CommentRating, ResumeRevision
 from backend.sqlite_upgrade import SCHEMA_VERSION, upgrade_db_command
 from backend.sqlite_upgrade import backup_db_command
 
@@ -137,6 +137,8 @@ def create_resume(user_id, content, target_field, feedback_request, content_form
     db.add(resume)
     try:
         db.flush()
+        db.add(snapshot(resume))
+        db.flush()
         result = resume_data(resume)
         db.commit()
     except SQLAlchemyError:
@@ -187,13 +189,18 @@ def comment_data(comment):
     return {
         "id": comment.id, "resume_id": comment.resume_id, "author_id": comment.author_id,
         "content": comment.content, "created_at": comment.created_at,
+        "revision_id": comment.revision_id,
     }
 
 
-def create_comment(resume_id, author_id, content):
+def create_comment(resume_id, author_id, content, revision_id=None):
     """Save a comment atomically; foreign keys require an existing resume and author."""
     db = get_db()
-    comment = Comment(resume_id=resume_id, author_id=author_id, content=content)
+    if revision_id is not None:
+        revision = db.get(ResumeRevision, revision_id)
+        if revision is None or revision.resume_id != resume_id:
+            raise ValueError("Revision does not belong to this résumé.")
+    comment = Comment(resume_id=resume_id, author_id=author_id, content=content, revision_id=revision_id)
     db.add(comment)
     try:
         db.flush()
@@ -228,11 +235,15 @@ def update_resume(resume_id, content, target_field, feedback_request, content_fo
     resume = db.get(Resume, resume_id)
     if resume is None:
         return False
+    changed = (resume.content, resume.content_format, resume.target_field, resume.feedback_request) != (
+        content, content_format, target_field, feedback_request)
     resume.content = content
     resume.content_format = content_format
     resume.target_field = target_field
     resume.feedback_request = feedback_request
     try:
+        if changed:
+            db.add(snapshot(resume))
         db.commit()
     except SQLAlchemyError:
         db.rollback()
@@ -250,6 +261,7 @@ def delete_resume(resume_id):
         comment_ids = select(Comment.id).where(Comment.resume_id == resume_id)
         db.execute(delete(CommentRating).where(CommentRating.comment_id.in_(comment_ids)))
         db.execute(delete(Comment).where(Comment.resume_id == resume_id))
+        db.execute(delete(ResumeRevision).where(ResumeRevision.resume_id == resume_id))
         db.delete(resume)
         db.commit()
     except SQLAlchemyError:
@@ -376,3 +388,31 @@ def update_display_name(user_id, display_name):
         db.rollback()
         raise
     return True
+
+
+def snapshot(resume):
+    """Copy current content/context without mutating previous versions."""
+    return ResumeRevision(resume_id=resume.id, content=resume.content,
+        content_format=resume.content_format, target_field=resume.target_field,
+        feedback_request=resume.feedback_request)
+
+
+def revision_data(revision):
+    """Expose only the stored résumé snapshot and its identifiers."""
+    if revision is None:
+        return None
+    return {key: getattr(revision, key) for key in (
+        "id", "resume_id", "content", "content_format", "target_field", "feedback_request", "created_at")}
+
+
+def get_current_revision(resume_id):
+    """Return the latest saved snapshot for a résumé."""
+    revision = get_db().scalar(select(ResumeRevision).where(
+        ResumeRevision.resume_id == resume_id).order_by(ResumeRevision.id.desc()).limit(1))
+    return revision_data(revision)
+
+
+def get_revision(resume_id, revision_id):
+    """Scope historical lookups to the résumé whose access was checked."""
+    return revision_data(get_db().scalar(select(ResumeRevision).where(
+        ResumeRevision.id == revision_id, ResumeRevision.resume_id == resume_id)))

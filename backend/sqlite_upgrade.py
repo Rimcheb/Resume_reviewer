@@ -9,9 +9,9 @@ from flask.cli import with_appcontext
 from sqlalchemy import inspect
 from sqlalchemy.exc import SQLAlchemyError
 
-from backend.models import Comment, CommentRating, Resume
+from backend.models import Comment, CommentRating, Resume, ResumeRevision
 
-SCHEMA_VERSION = 4
+SCHEMA_VERSION = 5
 
 
 def backup_database(connection, backup_path):
@@ -53,9 +53,11 @@ def upgrade_db(backup_path):
             raise click.ClickException("Expected the existing users, resumes, and comments tables.")
         columns = [column["name"] for column in inspector.get_columns("resumes")]
         user_columns = [column["name"] for column in inspector.get_columns("users")]
+        comment_columns = [column["name"] for column in inspector.get_columns("comments")]
         indexes = missing_indexes(connection)
         if ("target_field" in columns and "feedback_request" in columns and not indexes
                 and "display_name" in user_columns and "content_format" in columns
+                and "revision_id" in comment_columns and "resume_revisions" in tables
                 and "comment_ratings" in tables and version == SCHEMA_VERSION):
             return False
 
@@ -78,6 +80,15 @@ def upgrade_db(backup_path):
         for index in indexes:
             index.create(connection)
         CommentRating.__table__.create(connection, checkfirst=True)
+        ResumeRevision.__table__.create(connection, checkfirst=True)
+        if "revision_id" not in comment_columns:
+            connection.exec_driver_sql("ALTER TABLE comments ADD COLUMN revision_id INTEGER REFERENCES resume_revisions(id)")
+        # Capture only the current text; old comments retain unknown historical context.
+        connection.exec_driver_sql("""INSERT INTO resume_revisions
+            (resume_id, content, content_format, target_field, feedback_request)
+            SELECT r.id, r.content, r.content_format, r.target_field, r.feedback_request
+            FROM resumes r WHERE NOT EXISTS
+            (SELECT 1 FROM resume_revisions v WHERE v.resume_id = r.id)""")
         connection.exec_driver_sql(f"PRAGMA user_version = {SCHEMA_VERSION}")
     return True
 

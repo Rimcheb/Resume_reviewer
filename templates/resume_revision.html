@@ -1,0 +1,11 @@
+{% extends "base.html" %}
+{% block title %}Reviewed résumé version | Resume Reviewer{% endblock %}
+{% block content %}
+<h2>Reviewed résumé version</h2>
+<p>This is a saved version. The current résumé may have changed.</p>
+<p>Saved {{ revision.created_at }} (UTC)</p>
+<h3>{{ revision.target_field or "Resume" }}</h3>
+{% if revision.feedback_request %}<p>Requested feedback: {{ revision.feedback_request }}</p>{% endif %}
+<div class="resume-text{% if revision.content_format == 'html' %} rich-resume{% endif %}">{{ revision.content|resume_content(revision.content_format) }}</div>
+<p><a href="{{ url_for('resumes.detail', resume_id=resume.id) }}">Back to current résumé</a></p>
+{% endblock %}

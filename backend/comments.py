@@ -28,8 +28,14 @@ def create(resume_id):
     error = comment_error(content)
     if error is not None:
         return render_template("comment_form.html", resume=resume, content=content,
-                               error=error, comment_limit=COMMENT_LIMIT, comment=None), 400
-    comment = database.create_comment(resume_id, g.user["id"], content)
+                               error=error, comment_limit=COMMENT_LIMIT, comment=None,
+                               revision_id=request.form.get("revision_id", "")), 400
+    raw_revision = request.form.get("revision_id", "")
+    try:
+        revision_id = int(raw_revision) if raw_revision else None
+        comment = database.create_comment(resume_id, g.user["id"], content, revision_id)
+    except ValueError:
+        abort(400)
     return redirect(url_for("resumes.detail", resume_id=resume_id,
                             _anchor=f"comment-{comment['id']}"), code=303)
 
