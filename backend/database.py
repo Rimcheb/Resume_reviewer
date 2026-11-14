@@ -41,9 +41,9 @@ def list_resumes(user_id=None, target_field="", limit=10, offset=0):
     return current_app.extensions["storage"].list_resumes(user_id, target_field, limit, offset)
 
 
-def create_comment(resume_id, author_id, content):
+def create_comment(resume_id, author_id, content, revision_id=None):
     """Save validated comment text and return a plain comment record."""
-    return current_app.extensions["storage"].create_comment(resume_id, author_id, content)
+    return current_app.extensions["storage"].create_comment(resume_id, author_id, content, revision_id)
 
 
 def list_comments(resume_id):
@@ -104,3 +104,13 @@ def is_ready():
 def update_display_name(user_id, display_name):
     """Update the authenticated account’s public name."""
     return current_app.extensions["storage"].update_display_name(user_id, display_name)
+
+
+def get_current_revision(resume_id):
+    """Return the most recent snapshot after checking résumé access."""
+    return current_app.extensions["storage"].get_current_revision(resume_id)
+
+
+def get_revision(resume_id, revision_id):
+    """Return a historical snapshot scoped to the specified résumé."""
+    return current_app.extensions["storage"].get_revision(resume_id, revision_id)
