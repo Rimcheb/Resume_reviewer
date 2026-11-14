@@ -11,7 +11,7 @@ from sqlalchemy.exc import SQLAlchemyError
 
 from backend.models import Comment, CommentRating, Resume
 
-SCHEMA_VERSION = 3
+SCHEMA_VERSION = 4
 
 
 def backup_database(connection, backup_path):
@@ -55,7 +55,7 @@ def upgrade_db(backup_path):
         user_columns = [column["name"] for column in inspector.get_columns("users")]
         indexes = missing_indexes(connection)
         if ("target_field" in columns and "feedback_request" in columns and not indexes
-                and "display_name" in user_columns
+                and "display_name" in user_columns and "content_format" in columns
                 and "comment_ratings" in tables and version == SCHEMA_VERSION):
             return False
 
@@ -73,6 +73,8 @@ def upgrade_db(backup_path):
             connection.exec_driver_sql(
                 "ALTER TABLE resumes ADD COLUMN feedback_request TEXT NOT NULL DEFAULT ''"
             )
+        if "content_format" not in columns:
+            connection.exec_driver_sql("ALTER TABLE resumes ADD COLUMN content_format TEXT NOT NULL DEFAULT 'plain'")
         for index in indexes:
             index.create(connection)
         CommentRating.__table__.create(connection, checkfirst=True)

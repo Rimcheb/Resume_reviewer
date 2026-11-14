@@ -4,6 +4,8 @@ import os
 from flask import Flask, render_template
 from flask_wtf.csrf import CSRFError, CSRFProtect
 
+from backend.rich_text import render_content
+
 from backend import auth, comments, database, resumes, ratings, sqlite_storage
 
 
@@ -43,6 +45,7 @@ def create_app(config=None):
         SESSION_COOKIE_SAMESITE="Lax",
         SESSION_COOKIE_SECURE=os.getenv("COOKIE_SECURE", "true") != "false",
         MAX_CONTENT_LENGTH=256 * 1024,
+        RICH_TEXT_ENABLED=False,
     )
     if config is not None:
         application.config.update(config)
@@ -50,6 +53,7 @@ def create_app(config=None):
     if not application.config["SECRET_KEY"]:
         raise RuntimeError("Set SECRET_KEY before starting the app.")
 
+    application.jinja_env.filters["resume_content"] = render_content
     database.init_app(application)
     CSRFProtect(application)
     application.register_error_handler(CSRFError, csrf_error)

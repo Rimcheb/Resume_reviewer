@@ -12,3 +12,8 @@ input:not([type="hidden"]) {
 .main-nav form { margin: 0; padding: 0; background: none; }
 .main-nav button { margin: 0; width: auto; }
 .main-nav a:focus-visible, .main-nav button:focus-visible { outline: 3px solid currentColor; outline-offset: 3px; }
+
+.rich-resume { white-space: normal; }
+.rich-resume .ql-size-small { font-size: .75em; }
+.rich-resume .ql-size-large { font-size: 1.5em; }
+.rich-resume .ql-size-huge { font-size: 2.5em; }
