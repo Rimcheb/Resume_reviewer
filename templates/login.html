@@ -1,0 +1,17 @@
+{% extends "base.html" %}
+{% block title %}Log in | Resume Reviewer{% endblock %}
+{% block content %}
+<h2>Log in</h2>
+{% if error %}<p role="alert">{{ error }}</p>{% endif %}
+<form method="post" action="{{ url_for('auth.login', next=next_url) }}">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <label for="email">Email</label>
+    <input id="email" name="email" type="email" maxlength="254"
+           autocomplete="email" value="{{ email }}" required>
+    <label for="password">Password</label>
+    <input id="password" name="password" type="password" maxlength="128"
+           autocomplete="current-password" required>
+    <button type="submit">Log in</button>
+</form>
+<p><a href="{{ url_for('auth.register') }}">Create an account</a></p>
+{% endblock %}

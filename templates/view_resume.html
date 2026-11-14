@@ -1,0 +1,87 @@
+{% extends "base.html" %}
+{% block title %}Resume {{ resume.id }} | Resume Reviewer{% endblock %}
+{% block page_class %} review-page{% endblock %}
+{% block content %}
+<div class="resume-review">
+    <header class="review-header">
+        <p><a class="back-link" href="{{ url_for('resumes.new') }}">Back to Submit Resume</a></p>
+        <h2>{{ resume.target_field or "Review Resume" }}</h2>
+        <p>Submitted {{ resume.created_at }} (UTC)</p>
+        <p>{{ "Peer feedback received" if resume.has_peer_feedback else "Awaiting peer feedback" }}</p>
+    </header>
+
+    <section class="resume-section" aria-labelledby="resume-heading">
+        {% if resume.feedback_request %}
+        <h3>Requested feedback</h3>
+        <div class="feedback-request">{{ resume.feedback_request }}</div>
+        {% endif %}
+        <h3 id="resume-heading">Resume</h3>
+        <!-- Jinja escapes user text; CSS preserves line breaks. -->
+        <div class="resume-text">{{ resume.content }}</div>
+        {% if g.user.id == resume.user_id %}
+        <p><a href="{{ url_for('resumes.edit', resume_id=resume.id) }}">Edit resume</a></p>
+        <form method="post" action="{{ url_for('resumes.delete', resume_id=resume.id) }}">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <button type="submit">Delete resume and its comments</button>
+        </form>
+        {% endif %}
+    </section>
+
+    <section class="comments-section" aria-labelledby="comments-heading">
+        <h3 id="comments-heading">Discussion</h3>
+        <p>Comments are shown with the current resume and may refer to an earlier version.</p>
+        <ul class="comment-list">
+            {% for comment in comments %}
+            <li>
+                <article id="comment-{{ comment.id }}">
+                    <p><a href="{{ url_for('ratings.reviewer', user_id=comment.author_id) }}">Member {{ comment.author_id }}</a>{% if comment.author_id == resume.user_id %} (resume owner){% endif %}
+                        — {{ comment.created_at }} (UTC)</p>
+                    <div class="comment-text">{{ comment.content }}</div>
+                    {% if comment.id in ratings %}
+                    <p>Owner rated this {{ "helpful" if ratings[comment.id] else "not helpful" }}.</p>
+                    {% endif %}
+                    {% if g.user.id == resume.user_id and comment.author_id != resume.user_id %}
+                    <form method="post" action="{{ url_for('ratings.save', comment_id=comment.id) }}">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        <p class="note">Was this feedback useful to you?</p>
+                        <button type="submit" name="helpful" value="1">Helpful</button>
+                        <button type="submit" name="helpful" value="0">Not helpful</button>
+                    </form>
+                    {% if comment.id in ratings %}
+                    <form method="post" action="{{ url_for('ratings.delete', comment_id=comment.id) }}">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        <button type="submit">Remove rating</button>
+                    </form>
+                    {% endif %}
+                    {% endif %}
+                    {% if g.user.id == comment.author_id %}
+                    <p><a href="{{ url_for('comments.edit', comment_id=comment.id) }}">Edit comment</a></p>
+                    <form method="post" action="{{ url_for('comments.delete', comment_id=comment.id) }}">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        <button type="submit">Delete comment</button>
+                    </form>
+                    {% endif %}
+                </article>
+            </li>
+            {% else %}
+            <li class="note">No comments yet.</li>
+            {% endfor %}
+        </ul>
+    </section>
+
+    <section class="comment-form-section" aria-labelledby="write-comment-heading">
+        <h3 id="write-comment-heading">Add feedback or a follow-up</h3>
+        <form method="post" action="{{ url_for('comments.create', resume_id=resume.id) }}">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <label for="comment">Your comment</label>
+            <p id="comment-instructions" class="note">For useful feedback, identify the passage or problem,
+                explain why it matters, and suggest a concrete improvement. Questions and owner follow-ups are welcome.</p>
+            <textarea id="comment" name="comment" rows="6" maxlength="{{ comment_limit }}" required
+                aria-describedby="comment-instructions comment-limit"
+                placeholder="For example, add a measurable result to your most recent role."></textarea>
+            <p id="comment-limit" class="note">Up to {{ comment_limit }} characters. All authenticated members can read comments.</p>
+            <button type="submit">Post comment</button>
+        </form>
+    </section>
+</div>
+{% endblock %}

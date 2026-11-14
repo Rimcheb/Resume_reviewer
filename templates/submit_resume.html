@@ -1,29 +1,33 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Submit Resume</title>
-    <link rel="stylesheet" href="../static/style.css">
-</head>
-<body>
-    <main class="container">
-        <h1>Resume Reviewer</h1>
-        <p>Paste your resume below to get feedback.</p>
+{% extends "base.html" %}
+{% block title %}{{ "Edit" if resume else "Submit" }} Resume | Resume Reviewer{% endblock %}
+{% block content %}
+<h2>{{ "Edit" if resume else "Submit" }} your resume</h2>
+{% if resume %}
+<p>Existing comments will stay. They may refer to an earlier version of your text.</p>
+{% else %}
+<p>Paste your resume below to get feedback.</p>
+{% endif %}
+<p>All authenticated members can read your resume and feedback request.
+    Remove contact details and anything you do not want to share before posting.</p>
+{% if error %}<p role="alert">{{ error }}</p>{% endif %}
+<form method="post" action="{{ url_for('resumes.edit', resume_id=resume.id) if resume else url_for('resumes.create') }}">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <label for="target_field">Target role or field</label>
+    <input id="target_field" name="target_field" value="{{ target_field }}"
+           maxlength="{{ field_limit }}" required>
+    <p class="note">Up to {{ field_limit }} characters, such as Software engineering.</p>
 
-        <form>
-            <label for="resume">Your Resume</label>
-            <textarea
-                id="resume"
-                name="resume"
-                rows="12"
-                placeholder="Paste your resume here..."
-                required
-            ></textarea>
+    <label for="feedback_request">What would you like feedback on? (optional)</label>
+    <textarea id="feedback_request" name="feedback_request" rows="3"
+              maxlength="{{ feedback_limit }}">{{ feedback_request }}</textarea>
+    <p class="note">Up to {{ feedback_limit }} characters.</p>
 
-            <button type="button" disabled>Submit Resume</button>
-            <p class="note">Resume submission will be available once the backend is connected.</p>
-        </form>
-    </main>
-</body>
-</html>
+    <label for="resume">Your Resume</label>
+    <textarea id="resume" name="resume" rows="12" maxlength="{{ resume_limit }}"
+              placeholder="Paste your resume here..." required>{{ content }}</textarea>
+    <p class="note">Up to {{ resume_limit }} characters. Text only.</p>
+    <button type="submit">{{ "Save changes" if resume else "Submit Resume" }}</button>
+</form>
+{% if resume %}<p><a href="{{ url_for('resumes.detail', resume_id=resume.id) }}">Back to resume</a></p>{% endif %}
+<p><a href="{{ url_for('auth.account') }}">Your account</a></p>
+{% endblock %}
