@@ -52,7 +52,8 @@ def delete(comment_id):
 @login_required
 def reviewer(user_id):
     """Show only the member ID and derived helpfulness, never their email or hash."""
-    if database.get_user_by_id(user_id) is None:
+    reviewer_user = database.get_user_by_id(user_id)
+    if reviewer_user is None:
         abort(404)
-    return render_template("reviewer.html", user_id=user_id,
+    return render_template("reviewer.html", user_id=user_id, display_name=reviewer_user["display_name"],
                            reputation=database.get_reputation(user_id))

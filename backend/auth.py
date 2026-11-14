@@ -1,5 +1,7 @@
 """Handle account input, password hashing, and authentication routes."""
 
+import unicodedata
+
 from email_validator import EmailNotValidError, validate_email
 from functools import wraps
 from urllib.parse import urlsplit
@@ -22,6 +24,7 @@ def normalize_email(value):
 def register():
     """Create an account after validating the email and password."""
     email = ""
+    display_name = ""
     error = None
     status = 200
     if request.method == "POST":
@@ -35,9 +38,13 @@ def register():
         if not 8 <= len(password) <= 128 or not password.strip():
             error = "Use a password with 8 to 128 characters."
 
+        display_name = request.form.get("display_name", "").strip()
+        if display_name and not valid_display_name(display_name):
+            error = "Use a display name with 1 to 80 characters, without @ or control characters."
+
         if error is None:
             password_hash = generate_password_hash(password)
-            user = database.create_user(email, password_hash)
+            user = database.create_user(email, password_hash, display_name)
             if user is None:
                 error = "That email is already registered."
                 status = 409
@@ -46,7 +53,7 @@ def register():
                 return redirect(url_for("auth.login"), code=303)
         if status == 200:
             status = 400
-    return render_template("register.html", email=email, error=error), status
+    return render_template("register.html", email=email, display_name=display_name, error=error), status
 
 
 @bp.before_app_request
@@ -123,10 +130,24 @@ def logout():
     return redirect(url_for("auth.login"), code=303)
 
 
-@bp.get("/account")
+def valid_display_name(value):
+    """Accept a bounded public name without email addresses or control characters."""
+    return 1 <= len(value) <= 80 and "@" not in value and all(
+        not unicodedata.category(c).startswith("C") for c in value
+    )
+
+
+@bp.route("/account", methods=["GET", "POST"])
 @login_required
 def account():
     """Show the current user's account without exposing password data."""
+    if request.method == "POST":
+        display_name = request.form.get("display_name", "").strip()
+        if not valid_display_name(display_name):
+            return render_template("account.html", error="Use a display name with 1 to 80 characters, without @ or control characters."), 400
+        database.update_display_name(g.user["id"], display_name)
+        flash("Display name updated.")
+        return redirect(url_for("auth.account"), code=303)
     return render_template("account.html")
 
 

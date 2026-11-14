@@ -1,7 +1,7 @@
 {% extends "base.html" %}
-{% block title %}Member {{ user_id }} feedback | Resume Reviewer{% endblock %}
+{% block title %}{{ display_name }} feedback | Resume Reviewer{% endblock %}
 {% block content %}
-<h2>Member {{ user_id }} feedback</h2>
+<h2>{{ display_name }} feedback</h2>
 {% if reputation.total %}
 <p>{{ reputation.helpful }} of {{ reputation.total }} rated comments marked helpful
     ({{ reputation.percentage }}%).</p>

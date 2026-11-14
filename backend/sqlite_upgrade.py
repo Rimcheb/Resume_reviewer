@@ -11,7 +11,7 @@ from sqlalchemy.exc import SQLAlchemyError
 
 from backend.models import Comment, CommentRating, Resume
 
-SCHEMA_VERSION = 2
+SCHEMA_VERSION = 3
 
 
 def backup_database(connection, backup_path):
@@ -52,12 +52,17 @@ def upgrade_db(backup_path):
         if not all(table in tables for table in ("users", "resumes", "comments")):
             raise click.ClickException("Expected the existing users, resumes, and comments tables.")
         columns = [column["name"] for column in inspector.get_columns("resumes")]
+        user_columns = [column["name"] for column in inspector.get_columns("users")]
         indexes = missing_indexes(connection)
         if ("target_field" in columns and "feedback_request" in columns and not indexes
+                and "display_name" in user_columns
                 and "comment_ratings" in tables and version == SCHEMA_VERSION):
             return False
 
         backup_database(connection, backup_path)
+
+        if "display_name" not in user_columns:
+            connection.exec_driver_sql("ALTER TABLE users ADD COLUMN display_name TEXT NOT NULL DEFAULT ''")
 
         # create_all cannot add columns. Fixed ALTER statements preserve old rows.
         if "target_field" not in columns:
