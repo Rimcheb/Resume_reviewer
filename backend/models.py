@@ -23,6 +23,7 @@ class Resume(Base):
     __tablename__ = "resumes"
     id = Column(Integer, primary_key=True)
     user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    content_format = Column(Text, nullable=False, server_default="plain")
     content = Column(Text, nullable=False)
     created_at = Column(Text, nullable=False, server_default=func.current_timestamp())
     target_field = Column(Text, nullable=False, server_default="")
