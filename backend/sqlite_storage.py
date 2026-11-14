@@ -152,6 +152,7 @@ def resume_query():
     peer_feedback = select(Comment.id).where(
         Comment.resume_id == Resume.id,
         Comment.author_id != Resume.user_id,
+        Comment.is_deleted == 0,
     ).exists()
     return select(Resume, peer_feedback)
 
@@ -189,18 +190,24 @@ def comment_data(comment):
     return {
         "id": comment.id, "resume_id": comment.resume_id, "author_id": comment.author_id,
         "content": comment.content, "created_at": comment.created_at,
-        "revision_id": comment.revision_id,
+        "revision_id": comment.revision_id, "parent_id": comment.parent_id,
+        "is_deleted": bool(comment.is_deleted),
     }
 
 
-def create_comment(resume_id, author_id, content, revision_id=None):
+def create_comment(resume_id, author_id, content, revision_id=None, parent_id=None):
     """Save a comment atomically; foreign keys require an existing resume and author."""
     db = get_db()
+    if parent_id is not None:
+        parent = db.get(Comment, parent_id)
+        if parent is None or parent.resume_id != resume_id or parent.is_deleted or parent.parent_id is not None:
+            raise ValueError("Choose an available original comment on this résumé.")
+        revision_id = parent.revision_id
     if revision_id is not None:
         revision = db.get(ResumeRevision, revision_id)
         if revision is None or revision.resume_id != resume_id:
             raise ValueError("Revision does not belong to this résumé.")
-    comment = Comment(resume_id=resume_id, author_id=author_id, content=content, revision_id=revision_id)
+    comment = Comment(resume_id=resume_id, author_id=author_id, content=content, revision_id=revision_id, parent_id=parent_id)
     db.add(comment)
     try:
         db.flush()
@@ -221,7 +228,16 @@ def list_comments(resume_id):
         record = comment_data(comment)
         record["author_display_name"] = display_name or "Reviewer"
         records.append(record)
-    return records
+    children = {}
+    for record in records:
+        if record["parent_id"] is not None:
+            children.setdefault(record["parent_id"], []).append(record)
+    grouped = []
+    for record in records:
+        if record["parent_id"] is None:
+            grouped.append(record)
+            grouped.extend(children.get(record["id"], []))
+    return grouped
 
 
 def get_comment_by_id(comment_id):
@@ -274,7 +290,7 @@ def update_comment(comment_id, content):
     """Change only comment text, retaining its author, resume, and creation time."""
     db = get_db()
     comment = db.get(Comment, comment_id)
-    if comment is None:
+    if comment is None or comment.is_deleted:
         return False
     comment.content = content
     try:
@@ -293,7 +309,12 @@ def delete_comment(comment_id):
         return False
     try:
         db.execute(delete(CommentRating).where(CommentRating.comment_id == comment_id))
-        db.delete(comment)
+        has_replies = db.scalar(select(Comment.id).where(Comment.parent_id == comment_id).limit(1))
+        if has_replies is not None:
+            comment.content = "Comment deleted."
+            comment.is_deleted = 1
+        else:
+            db.delete(comment)
         db.commit()
     except SQLAlchemyError:
         db.rollback()
@@ -336,6 +357,7 @@ def eligible_ratings():
     return select(CommentRating).join(Comment).join(Resume).where(
         CommentRating.rater_id == Resume.user_id,
         Comment.author_id != Resume.user_id,
+        Comment.is_deleted == 0,
     )
 
 

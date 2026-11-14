@@ -41,9 +41,9 @@ def list_resumes(user_id=None, target_field="", limit=10, offset=0):
     return current_app.extensions["storage"].list_resumes(user_id, target_field, limit, offset)
 
 
-def create_comment(resume_id, author_id, content, revision_id=None):
+def create_comment(resume_id, author_id, content, revision_id=None, parent_id=None):
     """Save validated comment text and return a plain comment record."""
-    return current_app.extensions["storage"].create_comment(resume_id, author_id, content, revision_id)
+    return current_app.extensions["storage"].create_comment(resume_id, author_id, content, revision_id, parent_id)
 
 
 def list_comments(resume_id):

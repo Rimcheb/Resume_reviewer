@@ -11,7 +11,7 @@ from sqlalchemy.exc import SQLAlchemyError
 
 from backend.models import Comment, CommentRating, Resume, ResumeRevision
 
-SCHEMA_VERSION = 5
+SCHEMA_VERSION = 6
 
 
 def backup_database(connection, backup_path):
@@ -57,7 +57,8 @@ def upgrade_db(backup_path):
         indexes = missing_indexes(connection)
         if ("target_field" in columns and "feedback_request" in columns and not indexes
                 and "display_name" in user_columns and "content_format" in columns
-                and "revision_id" in comment_columns and "resume_revisions" in tables
+                and all(name in comment_columns for name in ("revision_id", "parent_id", "is_deleted"))
+                and "resume_revisions" in tables
                 and "comment_ratings" in tables and version == SCHEMA_VERSION):
             return False
 
@@ -83,6 +84,10 @@ def upgrade_db(backup_path):
         ResumeRevision.__table__.create(connection, checkfirst=True)
         if "revision_id" not in comment_columns:
             connection.exec_driver_sql("ALTER TABLE comments ADD COLUMN revision_id INTEGER REFERENCES resume_revisions(id)")
+        if "parent_id" not in comment_columns:
+            connection.exec_driver_sql("ALTER TABLE comments ADD COLUMN parent_id INTEGER REFERENCES comments(id)")
+        if "is_deleted" not in comment_columns:
+            connection.exec_driver_sql("ALTER TABLE comments ADD COLUMN is_deleted INTEGER NOT NULL DEFAULT 0")
         # Capture only the current text; old comments retain unknown historical context.
         connection.exec_driver_sql("""INSERT INTO resume_revisions
             (resume_id, content, content_format, target_field, feedback_request)
