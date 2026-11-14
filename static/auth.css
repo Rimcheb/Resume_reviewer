@@ -17,3 +17,5 @@ input:not([type="hidden"]) {
 .rich-resume .ql-size-small { font-size: .75em; }
 .rich-resume .ql-size-large { font-size: 1.5em; }
 .rich-resume .ql-size-huge { font-size: 2.5em; }
+
+.comment-list .comment-reply { margin-inline-start: 1rem; padding-inline-start: .75rem; border-inline-start: 3px solid var(--color-border, #888); }

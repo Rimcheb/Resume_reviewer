@@ -56,6 +56,8 @@ class Comment(Base):
     resume_id = Column(Integer, ForeignKey("resumes.id"), nullable=False)
     author_id = Column(Integer, ForeignKey("users.id"), nullable=False)
     revision_id = Column(Integer, ForeignKey("resume_revisions.id"), nullable=True)
+    parent_id = Column(Integer, ForeignKey("comments.id"), nullable=True)
+    is_deleted = Column(Integer, nullable=False, server_default="0")
     content = Column(Text, nullable=False)
     created_at = Column(Text, nullable=False, server_default=func.current_timestamp())
     __table_args__ = (
