@@ -100,7 +100,7 @@ button:disabled {
 }
 
 /* Preserve pasted line breaks and wrap long text within narrow screens. */
-.resume-review .resume-text,
+.resume-text,
 .resume-review .comment-text {
     white-space: pre-wrap;
     overflow-wrap: anywhere;
@@ -110,7 +110,7 @@ button:disabled {
 }
 
 /* Give plain resume text the spacing and surface of a document. */
-.resume-review .resume-text {
+.resume-text {
     padding: var(--space-6);
     background: var(--color-background);
     line-height: 1.7;

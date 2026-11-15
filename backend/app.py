@@ -15,7 +15,7 @@ def csrf_error(error):
 
 
 UPLOAD_LIMIT = 2 * 1024 * 1024
-UPLOAD_ENDPOINTS = ("resumes.create", "resumes.edit", "resumes.import_file")
+UPLOAD_ENDPOINTS = ("resumes.create", "resumes.edit", "resumes.import_file", "resumes.preview")
 
 
 def allow_uploads():
