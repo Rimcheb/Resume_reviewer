@@ -10,6 +10,7 @@ from flask import Blueprint, flash, g, redirect, render_template, request, sessi
 from werkzeug.security import check_password_hash, generate_password_hash
 
 from backend import database
+from backend.models import FIELDS
 
 bp = Blueprint("auth", __name__)
 
@@ -18,6 +19,12 @@ def normalize_email(value):
     """Check address syntax without contacting an email server."""
     address = validate_email(value.strip(), check_deliverability=False)
     return address.normalized.lower()
+
+
+def chosen_fields(form):
+    """Keep only known fields from the checkboxes, in list order."""
+    picked = set(form.getlist("review_fields"))
+    return [field for field in FIELDS if field in picked]
 
 
 @bp.route("/register", methods=["GET", "POST"])
@@ -44,7 +51,7 @@ def register():
 
         if error is None:
             password_hash = generate_password_hash(password)
-            user = database.create_user(email, password_hash, display_name)
+            user = database.create_user(email, password_hash, display_name, review_fields=chosen_fields(request.form))
             if user is None:
                 error = "That email is already registered."
                 status = 409
@@ -53,7 +60,7 @@ def register():
                 return redirect(url_for("auth.login"), code=303)
         if status == 200:
             status = 400
-    return render_template("register.html", email=email, display_name=display_name, error=error), status
+    return render_template("register.html", email=email, display_name=display_name, error=error, fields=FIELDS, chosen=chosen_fields(request.form)), status
 
 
 @bp.before_app_request
@@ -149,11 +156,11 @@ def account():
     if request.method == "POST":
         display_name = request.form.get("display_name", "").strip()
         if not valid_display_name(display_name):
-            return render_template("account.html", error="Use a display name with 1 to 80 characters, without @ or control characters."), 400
+            return render_template("account.html", error="Use a display name with 1 to 80 characters, without @ or control characters.", fields=FIELDS, chosen=g.user["review_fields"]), 400
         database.update_display_name(g.user["id"], display_name)
         flash("Display name updated.")
         return redirect(url_for("auth.account"), code=303)
-    return render_template("account.html")
+    return render_template("account.html", fields=FIELDS, chosen=g.user["review_fields"])
 
 
 @bp.get("/")
@@ -162,3 +169,12 @@ def index():
     if g.user is None:
         return redirect(url_for("auth.login"))
     return redirect(url_for("resumes.feed"))
+
+
+@bp.post("/account/fields")
+@login_required
+def review_fields():
+    """Save the existing field preferences for the authenticated member."""
+    database.update_review_fields(g.user["id"], chosen_fields(request.form))
+    flash("Your review fields were saved.")
+    return redirect(url_for("auth.account"), code=303)

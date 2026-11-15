@@ -1,0 +1,10 @@
+{# Checkboxes for the fields a member can review; `chosen` holds the ticked ones. #}
+<fieldset>
+    <legend>Fields you can review (optional)</legend>
+    <p class="note">Pick every field you know well, e.g. data science and software engineering.
+        Resumes in these fields show first in your feed.</p>
+    {% for field in fields %}
+    <label><input type="checkbox" name="review_fields" value="{{ field }}"
+                  {% if field in chosen %}checked{% endif %}> {{ field }}</label>
+    {% endfor %}
+</fieldset>
