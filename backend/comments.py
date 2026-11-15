@@ -30,6 +30,8 @@ def create(resume_id):
         return render_template("comment_form.html", resume=resume, content=content,
                                error=error, comment_limit=COMMENT_LIMIT, comment=None), 400
     comment = database.create_comment(resume_id, g.user["id"], content)
+    if resume["user_id"] != g.user["id"]:
+        database.record_review_credit(g.user["id"], resume_id)
     return redirect(url_for("resumes.detail", resume_id=resume_id,
                             _anchor=f"comment-{comment['id']}"), code=303)
 

@@ -127,7 +127,7 @@ def logout():
 @login_required
 def account():
     """Show the current user's account without exposing password data."""
-    return render_template("account.html")
+    return render_template("account.html", balance=database.review_balance(g.user["id"]))
 
 
 @bp.get("/")
