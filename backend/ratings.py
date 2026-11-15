@@ -8,6 +8,9 @@ from backend.permissions import require_owner
 
 bp = Blueprint("ratings", __name__)
 
+# Survey: a score from one or two ratings felt unfair, so wait for a few.
+MIN_REVIEWS = 3
+
 
 def ratable_comment(comment_id):
     """Only a resume owner may rate a comment written by someone else."""
@@ -54,5 +57,5 @@ def reviewer(user_id):
     """Show only the member ID and derived helpfulness, never their email or hash."""
     if database.get_user_by_id(user_id) is None:
         abort(404)
-    return render_template("reviewer.html", user_id=user_id,
+    return render_template("reviewer.html", user_id=user_id, min_reviews=MIN_REVIEWS,
                            reputation=database.get_reputation(user_id))
