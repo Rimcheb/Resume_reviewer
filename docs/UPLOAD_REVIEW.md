@@ -32,8 +32,9 @@ request body permits a small multipart overhead above the file limit.
 
 ## Remaining review/deployment concerns
 
-Draft pending browser verification: the browser connection was unavailable during
-this run. Parsing still runs in the web request, inherited from PR #77. File/page/
+Browser verification confirmed DOCX import (including table cells), review before
+saving, correction of extracted text, and final submission. Parsing still runs in
+the web request, inherited from PR #77. File/page/
 expansion limits reduce risk but do not guarantee a strict CPU/memory budget.
 Before public deployment, review subprocess/time-budget isolation and parser
 library versions. No database migration is introduced. When integrating with the
@@ -45,5 +46,5 @@ Save changes—not import—must create the revision snapshot.
 `python -m unittest discover -s tests -v`: seven focused tests exercise real PDF
 and DOCX files, table extraction order, review before publishing, corrected-text
 saving, encrypted/blank/corrupt/unsupported files, file/text/ZIP-expansion limits,
-owner permissions, CSRF and preserved existing content. Browser import/save flow
-still needs verification before marking the draft ready.
+owner permissions, CSRF and preserved existing content. Browser import/review/save flow was also verified with a fictional DOCX résumé.
+The draft still awaits parser resource-isolation and dependency review.
