@@ -5,6 +5,12 @@ from sqlalchemy.orm import declarative_base
 
 Base = declarative_base()
 
+# The choices for Resume.target_field. 
+FIELDS = (
+    "Software engineering", "Data science", "Product management", "Design (UX/UI)",
+    "Finance", "Consulting", "Marketing", "Research", "Other",
+)
+
 
 class User(Base):
     """An account identified by its email address."""
@@ -14,6 +20,9 @@ class User(Base):
     email = Column(Text, nullable=False, unique=True)
     display_name = Column(Text, nullable=False, server_default="")
     password_hash = Column(Text, nullable=False)
+    # Fields from FIELDS this member can review, one per line (a short, fixed list).
+    review_fields = Column(Text, nullable=False, server_default="")
+    expertise_bio = Column(Text, nullable=False, server_default="")
     __table_args__ = (CheckConstraint(func.length(func.trim(email)) > 0),)
 
 

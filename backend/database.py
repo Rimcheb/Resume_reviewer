@@ -19,9 +19,9 @@ def get_user_by_id(user_id):
     return current_app.extensions["storage"].get_user_by_id(user_id)
 
 
-def create_user(email, password_hash, display_name=""):
+def create_user(email, password_hash, display_name="", review_fields=()):
     """Save a normalized email and password hash, or return None if duplicate."""
-    return current_app.extensions["storage"].create_user(email, password_hash, display_name)
+    return current_app.extensions["storage"].create_user(email, password_hash, display_name, review_fields=review_fields)
 
 
 def create_resume(user_id, content, target_field, feedback_request, content_format="plain"):
@@ -36,9 +36,9 @@ def get_resume_by_id(resume_id):
     return current_app.extensions["storage"].get_resume_by_id(resume_id)
 
 
-def list_resumes(user_id=None, target_field="", limit=10, offset=0):
+def list_resumes(user_id=None, target_field="", limit=10, offset=0, preferred_fields=()):
     """Return newest first; match literal field substrings after Python lower()."""
-    return current_app.extensions["storage"].list_resumes(user_id, target_field, limit, offset)
+    return current_app.extensions["storage"].list_resumes(user_id, target_field, limit, offset, preferred_fields)
 
 
 def create_comment(resume_id, author_id, content, revision_id=None, parent_id=None):
@@ -114,3 +114,13 @@ def get_current_revision(resume_id):
 def get_revision(resume_id, revision_id):
     """Return a historical snapshot scoped to the specified résumé."""
     return current_app.extensions["storage"].get_revision(resume_id, revision_id)
+
+
+def update_review_fields(user_id, review_fields):
+    """Replace the fields this member can review (values already checked against FIELDS)."""
+    return current_app.extensions["storage"].update_review_fields(user_id, review_fields)
+
+
+def update_expertise_bio(user_id, bio):
+    """Save a validated plain-text bio for the authenticated member."""
+    return current_app.extensions["storage"].update_expertise_bio(user_id, bio)
