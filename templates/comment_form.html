@@ -5,6 +5,7 @@
 <p>Feedback on <a href="{{ url_for('resumes.detail', resume_id=resume.id) }}">{{ resume.target_field or "Resume" }}</a></p>
 <p>Identify the passage or problem, explain why it matters, and suggest a concrete improvement.
     Questions and owner follow-ups are welcome.</p>
+{% if comment %}<p class="note">Changing the text clears the owner's rating and "I used this" mark.</p>{% endif %}
 {% if error %}<p role="alert">{{ error }}</p>{% endif %}
 <form method="post" action="{{ url_for('comments.edit', comment_id=comment.id) if comment else url_for('comments.create', resume_id=resume.id) }}">
     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">

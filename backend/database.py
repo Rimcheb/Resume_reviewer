@@ -86,13 +86,18 @@ def delete_rating(comment_id, rater_id):
     return current_app.extensions["storage"].delete_rating(comment_id, rater_id)
 
 
+def mark_applied(comment_id, applied):
+    """Set (1) or clear (0) the owner's 'I used this' mark after permission checks."""
+    return current_app.extensions["storage"].mark_applied(comment_id, applied)
+
+
 def list_ratings(resume_id):
     """Return eligible owner ratings as a dictionary of comment ID to 0 or 1."""
     return current_app.extensions["storage"].list_ratings(resume_id)
 
 
 def get_reputation(user_id):
-    """Return helpful, total and percentage; an unrated percentage is None."""
+    """Return helpful, total, percentage (None if unrated) and applied-suggestion count."""
     return current_app.extensions["storage"].get_reputation(user_id)
 
 

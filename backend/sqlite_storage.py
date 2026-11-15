@@ -185,6 +185,7 @@ def comment_data(comment):
     return {
         "id": comment.id, "resume_id": comment.resume_id, "author_id": comment.author_id,
         "content": comment.content, "created_at": comment.created_at,
+        "applied": comment.applied,
     }
 
 
@@ -254,11 +255,18 @@ def delete_resume(resume_id):
 
 
 def update_comment(comment_id, content):
-    """Change only comment text, retaining its author, resume, and creation time."""
+    """Change comment text, keeping author, resume and creation time.
+
+    The owner's rating and "I used this" mark were for the old text, so changed text
+    clears them; otherwise a reviewer could edit endorsed advice into something else.
+    """
     db = get_db()
     comment = db.get(Comment, comment_id)
     if comment is None:
         return False
+    if comment.content != content:
+        comment.applied = 0
+        db.execute(delete(CommentRating).where(CommentRating.comment_id == comment_id))
     comment.content = content
     try:
         db.commit()
@@ -314,6 +322,21 @@ def delete_rating(comment_id, rater_id):
         raise
 
 
+def mark_applied(comment_id, applied):
+    """Record whether the resume owner applied this comment's advice."""
+    db = get_db()
+    comment = db.get(Comment, comment_id)
+    if comment is None:
+        return False
+    comment.applied = applied
+    try:
+        db.commit()
+    except SQLAlchemyError:
+        db.rollback()
+        raise
+    return True
+
+
 def eligible_ratings():
     """Exclude ratings by non-owners and ratings on self-comments."""
     return select(CommentRating).join(Comment).join(Resume).where(
@@ -340,7 +363,12 @@ def get_reputation(user_id):
     percentage = None
     if total:
         percentage = round(100 * helpful / total)
-    return {"helpful": helpful, "total": total, "percentage": percentage}
+    applied = get_db().scalar(
+        select(func.count(Comment.id)).join(Resume).where(
+            Comment.author_id == user_id, Comment.applied == 1, Resume.user_id != user_id,
+        )
+    )
+    return {"helpful": helpful, "total": total, "percentage": percentage, "applied": applied}
 
 
 def is_ready():

@@ -37,6 +37,9 @@
                     <p><a href="{{ url_for('ratings.reviewer', user_id=comment.author_id) }}">Member {{ comment.author_id }}</a>{% if comment.author_id == resume.user_id %} (resume owner){% endif %}
                         — {{ comment.created_at }} (UTC)</p>
                     <div class="comment-text">{{ comment.content }}</div>
+                    {% if comment.applied %}
+                    <p>✓ The owner applied this advice.</p>
+                    {% endif %}
                     {% if comment.id in ratings %}
                     <p>Owner rated this {{ "helpful" if ratings[comment.id] else "not helpful" }}.</p>
                     {% endif %}
@@ -46,6 +49,14 @@
                         <p class="note">Was this feedback useful to you?</p>
                         <button type="submit" name="helpful" value="1">Helpful</button>
                         <button type="submit" name="helpful" value="0">Not helpful</button>
+                    </form>
+                    <form method="post" action="{{ url_for('ratings.applied', comment_id=comment.id) }}">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        {% if comment.applied %}
+                        <button type="submit" name="applied" value="0">Undo "I used this"</button>
+                        {% else %}
+                        <button type="submit" name="applied" value="1">I used this</button>
+                        {% endif %}
                     </form>
                     {% if comment.id in ratings %}
                     <form method="post" action="{{ url_for('ratings.delete', comment_id=comment.id) }}">
