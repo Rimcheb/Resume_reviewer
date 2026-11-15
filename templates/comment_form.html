@@ -4,6 +4,7 @@
 <h2>{{ "Edit your comment" if comment else "Your comment" }}</h2>
 <p>Feedback on <a href="{{ url_for('resumes.detail', resume_id=resume.id) }}">{{ resume.target_field or "Resume" }}</a></p>
 <p>Identify the passage or problem, explain why it matters, and suggest a concrete improvement.
+    Suggest clearer wording for what actually happened; don't invent numbers or results.
     Questions and owner follow-ups are welcome.</p>
 {% if error %}<p role="alert">{{ error }}</p>{% endif %}
 <form method="post" action="{{ url_for('comments.edit', comment_id=comment.id) if comment else url_for('comments.create', resume_id=resume.id) }}">

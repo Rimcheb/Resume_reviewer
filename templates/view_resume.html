@@ -40,12 +40,23 @@
                     {% if comment.id in ratings %}
                     <p>Owner rated this {{ "helpful" if ratings[comment.id] else "not helpful" }}.</p>
                     {% endif %}
+                    {% if comment.pushes_exaggeration %}
+                    <p class="flag">⚠ The owner says this advice pushes them to exaggerate.</p>
+                    {% endif %}
                     {% if g.user.id == resume.user_id and comment.author_id != resume.user_id %}
                     <form method="post" action="{{ url_for('ratings.save', comment_id=comment.id) }}">
                         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                         <p class="note">Was this feedback useful to you?</p>
                         <button type="submit" name="helpful" value="1">Helpful</button>
                         <button type="submit" name="helpful" value="0">Not helpful</button>
+                    </form>
+                    <form method="post" action="{{ url_for('ratings.exaggeration', comment_id=comment.id) }}">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        {% if comment.pushes_exaggeration %}
+                        <button type="submit" name="flagged" value="0">Remove exaggeration flag</button>
+                        {% else %}
+                        <button type="submit" name="flagged" value="1">This pushes me to exaggerate</button>
+                        {% endif %}
                     </form>
                     {% if comment.id in ratings %}
                     <form method="post" action="{{ url_for('ratings.delete', comment_id=comment.id) }}">
@@ -75,10 +86,11 @@
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
             <label for="comment">Your comment</label>
             <p id="comment-instructions" class="note">For useful feedback, identify the passage or problem,
-                explain why it matters, and suggest a concrete improvement. Questions and owner follow-ups are welcome.</p>
+                explain why it matters, and suggest a concrete improvement. Suggest clearer wording for what
+                actually happened; don't invent numbers or results. Questions and owner follow-ups are welcome.</p>
             <textarea id="comment" name="comment" rows="6" maxlength="{{ comment_limit }}" required
                 aria-describedby="comment-instructions comment-limit"
-                placeholder="For example, add a measurable result to your most recent role."></textarea>
+                placeholder="For example, describe what you actually did and who it helped."></textarea>
             <p id="comment-limit" class="note">Up to {{ comment_limit }} characters. All authenticated members can read comments.</p>
             <button type="submit">Post comment</button>
         </form>
