@@ -1,12 +1,5 @@
 """Validate resume submissions and serve pages for authenticated members."""
 
-from io import BytesIO
-import zipfile
-from docx import Document
-from docx.table import Table
-from docx.text.paragraph import Paragraph
-from pypdf import PdfReader
-
 from urllib.parse import urlsplit, parse_qs
 
 from flask import current_app, Blueprint, abort, flash, g, redirect, render_template, request, url_for
@@ -18,6 +11,7 @@ from backend.models import FIELDS
 from backend.fields import normalize_field
 from backend.permissions import require_owner
 from backend.rich_text import prepare_content
+from backend.uploads import extract_upload, UploadError
 
 bp = Blueprint("resumes", __name__)
 
@@ -219,86 +213,7 @@ def revision(resume_id, revision_id):
         abort(404)
     return render_template("resume_revision.html", resume=resume, revision=record)
 
-MAX_UPLOAD_BYTES = 2 * 1024 * 1024
-MAX_PDF_PAGES = 10
-MAX_DOCX_UNZIPPED = 10 * 1024 * 1024
-MAX_PAGE_CONTENT = 1024 * 1024
 UNREADABLE_FILE = "Upload a readable .pdf or .docx file, or paste your resume as text."
-
-def file_text(upload):
-    """Turn an uploaded PDF or DOCX into plain text; None for other types or oversized files.
-
-    A small upload can expand hugely when unpacked, so both formats are capped:
-    pypdf 6 limits each decompressed PDF stream, pages and each page's decoded content
-    are capped, extraction stops once the text is already too long, and a DOCX's
-    unpacked size is checked first (zipfile refuses to inflate an entry past the size
-    its header declares).
-    ponytail: parsing runs in the web process, and a page that reuses one embedded
-    graphic many times can still be slow. With one waitress thread that blocks the site,
-    so move this into a subprocess with a timeout if uploads get abused.
-    """
-    raw = upload.read(MAX_UPLOAD_BYTES + 1)
-    if not raw or len(raw) > MAX_UPLOAD_BYTES:
-        return None
-    data = BytesIO(raw)
-    name = upload.filename.lower()
-    if name.endswith(".pdf"):
-        if not raw.startswith(b"%PDF-"):
-            return None
-        reader = PdfReader(data)
-        if reader.is_encrypted:
-            return None
-        if len(reader.pages) > MAX_PDF_PAGES:
-            return None
-        text = ""
-        for page in reader.pages:
-            contents = page.get_contents()
-            if contents is not None and len(contents.get_data()) > MAX_PAGE_CONTENT:
-                return None
-            text += (page.extract_text() or "") + "\n"
-            if len(text) > RESUME_LIMIT:
-                break  # already too long; submission_error reports it
-        return text.strip()
-    if name.endswith(".docx"):
-        with zipfile.ZipFile(data) as archive:
-            if sum(entry.file_size for entry in archive.infolist()) > MAX_DOCX_UNZIPPED:
-                return None
-            if "word/document.xml" not in archive.namelist():
-                return None
-        data.seek(0)
-        parts = []
-        text_length = 0
-        for block in Document(data).iter_inner_content():
-            before = len(parts)
-            if isinstance(block, Paragraph):
-                parts.append(block.text)
-            elif isinstance(block, Table):
-                for row in block.rows:
-                    seen = set()
-                    cells = []
-                    for cell in row.cells:
-                        if cell._tc not in seen:
-                            seen.add(cell._tc)
-                            cells.append(cell.text)
-                    parts.append("\t".join(cells))
-            text_length += sum(len(part) + 1 for part in parts[before:])
-            if text_length > RESUME_LIMIT:
-                break
-        return "\n".join(parts).strip()
-    return None
-
-def imported_text():
-    """Use an uploaded file when one was chosen, else the pasted text; None if unreadable.
-
-    The file is only read in memory. Only the extracted text is saved, never the file.
-    """
-    upload = request.files.get("resume_file")
-    if upload is None or not upload.filename:
-        return request.form.get("resume", "")
-    try:
-        return file_text(upload)
-    except Exception:  # pypdf and python-docx raise many error types for corrupt or encrypted files
-        return None
 
 @bp.post("/resumes/import")
 @bp.post("/resumes/<int:resume_id>/import")
@@ -317,7 +232,10 @@ def import_file(resume_id=None):
     upload = request.files.get("resume_file")
     if upload is None or not upload.filename:
         return submission_form(pasted, target, feedback, "Choose a PDF or DOCX file to import.", resume, original_format), 400
-    content = imported_text()
+    try:
+        content = extract_upload(upload)
+    except UploadError as error:
+        return submission_form(pasted, target, feedback, str(error), resume, original_format), error.status
     if content is None:
         return submission_form(pasted, target, feedback, UNREADABLE_FILE, resume, original_format), 400
     if not content.strip():

@@ -33,11 +33,9 @@ request body permits a small multipart overhead above the file limit.
 ## Remaining review/deployment concerns
 
 Browser verification confirmed DOCX import (including table cells), review before
-saving, correction of extracted text, and final submission. Parsing still runs in
-the web request, inherited from PR #77. File/page/
-expansion limits reduce risk but do not guarantee a strict CPU/memory budget.
-Before public deployment, review subprocess/time-budget isolation and parser
-library versions. No database migration is introduced. When integrating with the
+saving, correction of extracted text, and final submission. In this integration, parsing has moved to a resource-limited subprocess and parser
+versions are updated; see docs/BACKEND_INTEGRATION.md for platform-specific limits.
+No database migration is introduced. When integrating with the
 Quill/revision stack, imported text must use explicit plain format, and confirmed
 Save changes—not import—must create the revision snapshot.
 
@@ -47,4 +45,4 @@ Save changes—not import—must create the revision snapshot.
 and DOCX files, table extraction order, review before publishing, corrected-text
 saving, encrypted/blank/corrupt/unsupported files, file/text/ZIP-expansion limits,
 owner permissions, CSRF and preserved existing content. Browser import/review/save flow was also verified with a fictional DOCX résumé.
-The draft still awaits parser resource-isolation and dependency review.
+The integration remains draft pending dependency/release review.
