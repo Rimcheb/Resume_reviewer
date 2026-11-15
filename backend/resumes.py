@@ -8,6 +8,7 @@ from backend import database
 from backend.auth import login_required
 from backend.comments import COMMENT_LIMIT
 from backend.models import FIELDS
+from backend.fields import normalize_field
 from backend.permissions import require_owner
 from backend.rich_text import prepare_content
 
@@ -34,7 +35,7 @@ def submission_error(content, target_field, feedback_request, content_format="pl
 def submission_form(content="", target_field="", feedback_request="", error=None, resume=None, content_format="plain"):
     """Keep form values and limits together for initial display and errors."""
     return render_template(
-        "submit_resume.html", content=content, target_field=target_field,
+        "submit_resume.html", content=content, target_field=normalize_field(target_field) or target_field,
         feedback_request=feedback_request, error=error, resume=resume, content_format=content_format,
         resume_limit=RESUME_LIMIT, fields=FIELDS, feedback_limit=FEEDBACK_LIMIT,
     )
@@ -52,7 +53,7 @@ def new():
 def create():
     """Save text under the signed-in user's ID and open its detail page."""
     content = request.form.get("resume", "")
-    target_field = request.form.get("target_field", "")
+    target_field = normalize_field(request.form.get("target_field", "")) or ""
     feedback_request = request.form.get("feedback_request", "")
     content_format = request.form.get("content_format", "plain")
     try:
@@ -92,7 +93,7 @@ def edit(resume_id):
     require_owner(resume["user_id"])
     if request.method == "POST":
         content = request.form.get("resume", "")
-        target_field = request.form.get("target_field", "")
+        target_field = normalize_field(request.form.get("target_field", "")) or ""
         feedback_request = request.form.get("feedback_request", "")
         content_format = request.form.get("content_format", "plain")
         try:
@@ -134,8 +135,10 @@ def resume_list(user_id=None):
     if page < 1 or page > MAX_PAGE:
         abort(400)
     target_field = request.args.get("field", "").strip()
-    if target_field and target_field not in FIELDS:
-        abort(400)
+    if target_field:
+        target_field = normalize_field(target_field)
+        if target_field is None:
+            abort(400)
     # ponytail: storage still matches by substring, so résumés saved before the
     # dropdown existed (free text like "Software Engineering intern") still show up.
     # One extra row tells us whether a next page exists without counting all rows.
