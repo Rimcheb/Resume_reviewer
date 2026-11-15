@@ -178,3 +178,16 @@ def review_fields():
     database.update_review_fields(g.user["id"], chosen_fields(request.form))
     flash("Your review fields were saved.")
     return redirect(url_for("auth.account"), code=303)
+
+
+@bp.post("/account/bio")
+@login_required
+def expertise_bio():
+    """Allow members to change only their own optional public expertise bio."""
+    bio = request.form.get("expertise_bio", "").strip()
+    if len(bio) > 500 or any(unicodedata.category(c).startswith("C") and c not in "\n\t\r" for c in bio):
+        return render_template("account.html", fields=FIELDS, chosen=g.user["review_fields"],
+            bio_value=bio, error="Keep your expertise bio within 500 characters and remove unsupported control characters."), 400
+    database.update_expertise_bio(g.user["id"], bio)
+    flash("Your expertise bio was saved.")
+    return redirect(url_for("auth.account", _anchor="expertise"), code=303)

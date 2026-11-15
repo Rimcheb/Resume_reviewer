@@ -82,7 +82,8 @@ def user_data(user):
         return None
     return {"id": user.id, "email": user.email, "password_hash": user.password_hash,
             "display_name": user.display_name or "Reviewer",
-            "review_fields": [field for field in user.review_fields.split("\n") if field]}
+            "review_fields": [field for field in user.review_fields.split("\n") if field],
+            "expertise_bio": user.expertise_bio}
 
 
 def get_user_by_email(email):
@@ -454,6 +455,21 @@ def update_review_fields(user_id, review_fields):
     if user is None:
         return False
     user.review_fields = "\n".join(review_fields)
+    try:
+        db.commit()
+    except SQLAlchemyError:
+        db.rollback()
+        raise
+    return True
+
+
+def update_expertise_bio(user_id, bio):
+    """Save the authenticated member's plain-text expertise bio atomically."""
+    db = get_db()
+    user = db.get(User, user_id)
+    if user is None:
+        return False
+    user.expertise_bio = bio
     try:
         db.commit()
     except SQLAlchemyError:

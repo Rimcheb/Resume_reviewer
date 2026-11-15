@@ -119,3 +119,8 @@ def get_revision(resume_id, revision_id):
 def update_review_fields(user_id, review_fields):
     """Replace the fields this member can review (values already checked against FIELDS)."""
     return current_app.extensions["storage"].update_review_fields(user_id, review_fields)
+
+
+def update_expertise_bio(user_id, bio):
+    """Save a validated plain-text bio for the authenticated member."""
+    return current_app.extensions["storage"].update_expertise_bio(user_id, bio)
