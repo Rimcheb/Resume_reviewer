@@ -12,10 +12,16 @@
 {% if error %}<p role="alert">{{ error }}</p>{% endif %}
 <form method="post" action="{{ url_for('resumes.edit', resume_id=resume.id) if resume else url_for('resumes.create') }}">
     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-    <label for="target_field">Target role or field</label>
-    <input id="target_field" name="target_field" value="{{ target_field }}"
-           maxlength="{{ field_limit }}" required>
-    <p class="note">Up to {{ field_limit }} characters, such as Software engineering.</p>
+    <label for="target_field">Target field</label>
+    <select id="target_field" name="target_field" required>
+        <option value="">Choose a field</option>
+        {% for field in fields %}
+        <option{% if field == target_field %} selected{% endif %}>{{ field }}</option>
+        {% endfor %}
+    </select>
+    {% if target_field and target_field not in fields %}
+    <p class="note">You previously entered "{{ target_field }}". Choose the closest field from the list.</p>
+    {% endif %}
 
     <label for="feedback_request">What would you like feedback on? (optional)</label>
     <textarea id="feedback_request" name="feedback_request" rows="3"
