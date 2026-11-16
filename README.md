@@ -23,3 +23,9 @@ targeting and what you want feedback on, and other members review it.
 - **Rate** feedback on your own résumé as helpful or not helpful.
 - **Reputation:** each reviewer has a page showing how often their feedback was rated helpful.
 - **Edit or delete** your own résumés and comments at any time.
+
+## Flask foundation setup
+
+See [the foundation setup and test guide](docs/FLASK_FOUNDATION.md) for local
+commands and the scope of the first backend PR. The hosted demo may run a later
+backend version than this foundation branch.
