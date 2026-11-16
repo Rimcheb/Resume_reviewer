@@ -2,11 +2,12 @@
 {% block title %}{{ display_name }} feedback | Resume Reviewer{% endblock %}
 {% block content %}
 <h2>{{ display_name }} feedback</h2>
-{% if reputation.total %}
+<p class="note">Reviewer #{{ user_id }} · Display names are chosen by users and are not verified or unique.</p>
+{% if reputation.total >= min_reviews %}
 <p>{{ reputation.helpful }} of {{ reputation.total }} rated comments marked helpful
     ({{ reputation.percentage }}%).</p>
 {% else %}
-<p>Not rated yet.</p>
+<p>The score appears after {{ min_reviews }} rated reviews ({{ reputation.total }} so far).</p>
 {% endif %}
 <p>Only the resume owner can rate another member's feedback.
     The percentage is helpful ratings divided by all ratings, rounded to a whole number.
