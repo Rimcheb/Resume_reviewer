@@ -11,11 +11,14 @@
     <main class="container{% block page_class %}{% endblock %}">
         <h1>Resume Reviewer</h1>
         {% if g.user %}
-        <nav aria-label="Main navigation">
-            <a href="{{ url_for('resumes.feed') }}">Browse resumes</a> |
-            <a href="{{ url_for('resumes.mine') }}">My resumes</a> |
-            <a href="{{ url_for('resumes.new') }}">Submit a resume</a> |
-            <a href="{{ url_for('auth.account') }}">Your account</a>
+        <nav class="main-nav" aria-label="Main navigation">
+            {% for endpoint, label in [('resumes.feed', 'Browse resumes'), ('resumes.mine', 'My resumes'), ('resumes.new', 'Submit a resume'), ('auth.account', 'Your account')] %}
+            <a class="nav-action" href="{{ url_for(endpoint) }}"{% if request.endpoint == endpoint %} aria-current="page"{% endif %}>{{ label }}</a>
+            {% endfor %}
+            <form method="post" action="{{ url_for('auth.logout') }}">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <button type="submit">Log out</button>
+            </form>
         </nav>
         {% endif %}
         {% for message in get_flashed_messages() %}

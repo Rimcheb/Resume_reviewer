@@ -1,11 +1,14 @@
 """Validate resume submissions and serve pages for authenticated members."""
 
+from urllib.parse import urlsplit, parse_qs
+
 from flask import Blueprint, abort, flash, g, redirect, render_template, request, url_for
 
 from backend import database
 from backend.auth import login_required
 from backend.comments import COMMENT_LIMIT
 from backend.models import FIELDS
+from backend.fields import normalize_field
 from backend.permissions import require_owner
 
 bp = Blueprint("resumes", __name__)
@@ -30,7 +33,7 @@ def submission_error(content, target_field, feedback_request):
 def submission_form(content="", target_field="", feedback_request="", error=None, resume=None):
     """Keep form values and limits together for initial display and errors."""
     return render_template(
-        "submit_resume.html", content=content, target_field=target_field,
+        "submit_resume.html", content=content, target_field=normalize_field(target_field) or target_field,
         feedback_request=feedback_request, error=error, resume=resume,
         resume_limit=RESUME_LIMIT, fields=FIELDS, feedback_limit=FEEDBACK_LIMIT,
     )
@@ -48,7 +51,7 @@ def new():
 def create():
     """Save text under the signed-in user's ID and open its detail page."""
     content = request.form.get("resume", "")
-    target_field = request.form.get("target_field", "")
+    target_field = normalize_field(request.form.get("target_field", "")) or ""
     feedback_request = request.form.get("feedback_request", "")
     error = submission_error(content, target_field, feedback_request)
     if error is not None:
@@ -69,7 +72,7 @@ def detail(resume_id):
     comments = database.list_comments(resume_id)
     return render_template("view_resume.html", resume=resume, comments=comments,
                            ratings=database.list_ratings(resume_id),
-                           comment_limit=COMMENT_LIMIT)
+                           comment_limit=COMMENT_LIMIT, **list_return_context())
 
 
 @bp.route("/resumes/<int:resume_id>/edit", methods=["GET", "POST"])
@@ -82,7 +85,7 @@ def edit(resume_id):
     require_owner(resume["user_id"])
     if request.method == "POST":
         content = request.form.get("resume", "")
-        target_field = request.form.get("target_field", "")
+        target_field = normalize_field(request.form.get("target_field", "")) or ""
         feedback_request = request.form.get("feedback_request", "")
         error = submission_error(content, target_field, feedback_request)
         if error is not None:
@@ -119,10 +122,11 @@ def resume_list(user_id=None):
     if page < 1 or page > MAX_PAGE:
         abort(400)
     target_field = request.args.get("field", "").strip()
-    if target_field and target_field not in FIELDS:
-        abort(400)
-    # ponytail: storage still matches by substring, so résumés saved before the
-    # dropdown existed (free text like "Software Engineering intern") still show up.
+    if target_field:
+        target_field = normalize_field(target_field)
+        if target_field is None:
+            abort(400)
+    # Storage normalizes known legacy labels before filtering and pagination.
     # One extra row tells us whether a next page exists without counting all rows.
     records = database.list_resumes(user_id, target_field, PAGE_SIZE + 1, (page - 1) * PAGE_SIZE)
     if page > 1 and not records:
@@ -146,3 +150,27 @@ def feed():
 def mine():
     """Show only submissions owned by the signed-in user."""
     return resume_list(g.user["id"])
+
+
+def list_return_context():
+    """Rebuild Back destinations from known list routes and bounded parameters."""
+    fallback = {"back_url": url_for("resumes.feed"), "back_label": "Back to Browse"}
+    value = request.args.get("return_to", "")
+    try:
+        parts = urlsplit(value)
+        if parts.scheme or parts.netloc or parts.fragment or parts.path not in ("/resumes", "/my-resumes"):
+            return fallback
+        query = parse_qs(parts.query)
+        page = int(query.get("page", ["1"])[0])
+        field = query.get("field", [""])[0]
+        if not 1 <= page <= MAX_PAGE:
+            return fallback
+        if field:
+            field = normalize_field(field)
+            if field is None:
+                return fallback
+    except ValueError:
+        return fallback
+    endpoint = "resumes.mine" if parts.path == "/my-resumes" else "resumes.feed"
+    return {"back_url": url_for(endpoint, page=page, field=field),
+            "back_label": "Back to My Résumés" if endpoint == "resumes.mine" else "Back to Browse"}
