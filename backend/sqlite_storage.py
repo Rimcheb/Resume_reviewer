@@ -11,6 +11,7 @@ from sqlalchemy.pool import NullPool
 from backend.models import Base, Comment, Resume, User
 from sqlalchemy.dialects.sqlite import insert
 from backend.models import CommentRating
+from backend.fields import normalize_field
 from backend.sqlite_upgrade import SCHEMA_VERSION, upgrade_db_command
 from backend.sqlite_upgrade import backup_db_command
 
@@ -21,6 +22,7 @@ def configure_connection(connection, connection_record):
     connection.execute("PRAGMA foreign_keys = ON")
     # Use the same lowercase rules as other storage implementations.
     connection.create_function("lowercase", 1, str.lower)
+    connection.create_function("canonical_field", 1, normalize_field, deterministic=True)
 
 
 def begin_transaction(connection):
@@ -168,9 +170,10 @@ def list_resumes(user_id=None, target_field="", limit=10, offset=0):
     if user_id is not None:
         query = query.where(Resume.user_id == user_id)
     if target_field:
-        field = func.lowercase(Resume.target_field)
-        # instr finds literal text, including % and _, and returns 0 if absent.
-        query = query.where(func.instr(field, target_field.lower()) > 0)
+        category = normalize_field(target_field)
+        if category is None:
+            return []
+        query = query.where(func.canonical_field(Resume.target_field) == category)
     query = query.order_by(Resume.created_at.desc(), Resume.id.desc())
     rows = get_db().execute(query.limit(limit).offset(offset)).all()
     records = []

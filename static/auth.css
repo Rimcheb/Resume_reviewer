@@ -5,10 +5,3 @@ input:not([type="hidden"]) {
     font: inherit;
     min-width: 0;
 }
-
-.main-nav { display: flex; flex-wrap: wrap; gap: .5rem; align-items: center; margin-block: 1rem; }
-.main-nav .nav-action, .main-nav button { display: inline-block; padding: .65rem .85rem; border: 1px solid var(--color-border, #888); border-radius: .4rem; text-decoration: none; font: inherit; }
-.main-nav .nav-action[aria-current="page"] { font-weight: bold; outline: 2px solid currentColor; }
-.main-nav form { margin: 0; padding: 0; background: none; }
-.main-nav button { margin: 0; width: auto; }
-.main-nav a:focus-visible, .main-nav button:focus-visible { outline: 3px solid currentColor; outline-offset: 3px; }
