@@ -1,61 +1,25 @@
-# Run Resume Reviewer
+This is for CS162's final assignment.
 
-Use Python 3.12. Run commands from the project folder.
+# Resume Reviewer
 
-Windows PowerShell:
+Get honest, specific feedback on your résumé from peers who know your field, and give feedback in return.
 
-```powershell
-python -m venv .venv
-.venv\Scripts\python.exe -m pip install -r requirements.txt
-$env:SECRET_KEY = .venv\Scripts\python.exe -c "import secrets; print(secrets.token_hex(32))"
-$env:COOKIE_SECURE = "false"
-.venv\Scripts\python.exe -m flask --app app init-db
-.venv\Scripts\waitress-serve.exe --call --listen=127.0.0.1:5001 --threads=1 app:create_app
-```
+[Live app](https://resumereviewer.pythonanywhere.com/)
 
-macOS/Linux:
 
-```bash
-python3 -m venv .venv
-.venv/bin/python -m pip install -r requirements.txt
-export SECRET_KEY=$(.venv/bin/python -c "import secrets; print(secrets.token_hex(32))")
-export COOKIE_SECURE=false
-.venv/bin/python -m flask --app app init-db
-.venv/bin/waitress-serve --call --listen=127.0.0.1:5001 --threads=1 app:create_app
-```
+[Write up and Analysis](https://docs.google.com/document/d/1GaK4-kPtZVnA47MxypeM9CTyszr_W4Uas1ApG-ajEgU/edit?tab=t.0#heading=h.qcmfzo2b1jwy)
 
-Run init-db only for a new database. It refuses existing tables. Keep existing data.
-The default file is instance/resume_reviewer.sqlite. To use another file, set
-DATABASE_PATH to an absolute filename before initialization and startup. Use the
-same path when restarting. Set environment variables in every new terminal.
-COOKIE_SECURE=false is for local HTTP; use true and a stable private SECRET_KEY
-for HTTPS hosting. Never commit secrets or database files.
 
-Open http://127.0.0.1:5001 and register, then log in. /health returns server status.
-If port 5001 is occupied, choose another port and update the URL.
+[Survey](https://docs.google.com/forms/d/e/1FAIpQLSe4nhDJyu0zrM4oAXz20m8BwBwyqJhztEwccmk8yEmvaTgelQ/viewform?usp=publish-editor)
 
-For an existing database, stop the app and upgrade using a new backup filename:
+## What it does
 
-```bash
-python -m flask --app app upgrade-db --backup before-upgrade.sqlite
-```
+Resume Reviewer is a free peer-review site. You post your résumé, say which field you're
+targeting and what you want feedback on, and other members review it.
 
-Use the virtual environment's Python as above. Upgrades preserve existing records;
-repeating an up-to-date upgrade changes nothing. Submitted text is readable by all
-signed-in members; remove private contact details before posting.
-
-/ready checks database availability/schema; /health checks the server independently.
-Use one application instance and a persistent local SQLite file for hosting.
-
-Create a consistent backup with a new destination filename:
-
-```bash
-python -m flask --app app backup-db --backup manual-backup.sqlite
-```
-
-Store another copy off the host. To restore, stop every app process, preserve the
-current database, copy the backup to a new file and set DATABASE_PATH to that copy.
-Upgrade it with another backup if necessary, then start and check /ready and saved
-records. A snapshot omits later changes. For code rollback, use the matching older
-code with its pre-upgrade backup. Keep HTTPS and private environment settings on
-the host; debug mode is off.
+- **Submit** your résumé text with a target field and an optional feedback request.
+- **Browse** other members' résumés, newest first, and filter by field.
+- **Review** a résumé by leaving comments. Owners can reply with follow-ups.
+- **Rate** feedback on your own résumé as helpful or not helpful.
+- **Reputation:** each reviewer has a page showing how often their feedback was rated helpful.
+- **Edit or delete** your own résumés and comments at any time.

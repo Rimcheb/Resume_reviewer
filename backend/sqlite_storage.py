@@ -78,7 +78,8 @@ def user_data(user):
     """Copy a database object into a plain record that works outside a session."""
     if user is None:
         return None
-    return {"id": user.id, "email": user.email, "password_hash": user.password_hash}
+    return {"id": user.id, "email": user.email, "password_hash": user.password_hash,
+            "display_name": user.display_name or "Reviewer"}
 
 
 def get_user_by_email(email):
@@ -92,10 +93,10 @@ def get_user_by_id(user_id):
     return user_data(get_db().get(User, user_id))
 
 
-def create_user(email, password_hash):
+def create_user(email, password_hash, display_name=""):
     """Save one user atomically; return None if the email already exists."""
     db = get_db()
-    user = User(email=email, password_hash=password_hash)
+    user = User(email=email, password_hash=password_hash, display_name=display_name)
     db.add(user)
     try:
         db.flush()  # Get the new ID before committing and expiring the ORM object.
@@ -206,11 +207,13 @@ def create_comment(resume_id, author_id, content):
 
 def list_comments(resume_id):
     """Read only this resume's comments in a stable discussion order."""
-    query = select(Comment).where(Comment.resume_id == resume_id)
+    query = select(Comment, User.display_name).join(User, User.id == Comment.author_id).where(Comment.resume_id == resume_id)
     query = query.order_by(Comment.created_at, Comment.id)
     records = []
-    for comment in get_db().scalars(query):
-        records.append(comment_data(comment))
+    for comment, display_name in get_db().execute(query):
+        record = comment_data(comment)
+        record["author_display_name"] = display_name or "Reviewer"
+        records.append(record)
     return records
 
 
@@ -371,4 +374,19 @@ def is_ready():
                 connection.execute(select(table).limit(0))
     except SQLAlchemyError:
         return False
+    return True
+
+
+def update_display_name(user_id, display_name):
+    """Save an account name atomically."""
+    db = get_db()
+    user = db.get(User, user_id)
+    if user is None:
+        return False
+    user.display_name = display_name
+    try:
+        db.commit()
+    except SQLAlchemyError:
+        db.rollback()
+        raise
     return True

@@ -18,6 +18,7 @@ class User(Base):
     __tablename__ = "users"
     id = Column(Integer, primary_key=True)
     email = Column(Text, nullable=False, unique=True)
+    display_name = Column(Text, nullable=False, server_default="")
     password_hash = Column(Text, nullable=False)
     __table_args__ = (CheckConstraint(func.length(func.trim(email)) > 0),)
 
