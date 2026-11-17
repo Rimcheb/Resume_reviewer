@@ -1,44 +1,31 @@
-# Run the Flask foundation
+This is for CS162's final assignment.
 
-Use Python 3.12. From the project folder:
+# Resume Reviewer
 
-Windows PowerShell:
+Get honest, specific feedback on your résumé from peers who know your field, and give feedback in return.
 
-```powershell
-python -m venv .venv
-.venv\Scripts\python.exe -m pip install -r requirements.txt
-.venv\Scripts\python.exe -m flask --app app init-db
-.venv\Scripts\python.exe -m flask --app app run --port 5001
-```
+[Live app](https://resumereviewer.pythonanywhere.com/)
 
-macOS/Linux:
 
-```bash
-python3 -m venv .venv
-.venv/bin/python -m pip install -r requirements.txt
-.venv/bin/python -m flask --app app init-db
-.venv/bin/python -m flask --app app run --port 5001
-```
+[Write up and Analysis](https://docs.google.com/document/d/1GaK4-kPtZVnA47MxypeM9CTyszr_W4Uas1ApG-ajEgU/edit?tab=t.0#heading=h.qcmfzo2b1jwy)
 
-Open http://127.0.0.1:5001/health. It returns `{"status":"ok"}` with HTTP 200.
-This foundation exposes only the health endpoint; account and resume routes arrive
-in the backend feature changes. The root URL returns 404 at this stage.
 
-Run `init-db` only for a new database. It creates the users, resumes and comments
-tables and refuses to initialize a file that already contains tables.
-If your database already has these tables, skip initialization.
+[Survey](https://docs.google.com/forms/d/e/1FAIpQLSe4nhDJyu0zrM4oAXz20m8BwBwyqJhztEwccmk8yEmvaTgelQ/viewform?usp=publish-editor)
 
-The default database is `instance/resume_reviewer.sqlite`. For another location,
-set `DATABASE_PATH` before running initialization or starting the server:
+## What it does
 
-```powershell
-$env:DATABASE_PATH = "C:/absolute/path/to/resume_reviewer.sqlite"
-```
+Resume Reviewer is a free peer-review site. You post your résumé, say which field you're
+targeting and what you want feedback on, and other members review it.
 
-```bash
-export DATABASE_PATH=/absolute/path/to/resume_reviewer.sqlite
-```
+- **Submit** your résumé text with a target field and an optional feedback request.
+- **Browse** other members' résumés, newest first, and filter by field.
+- **Review** a résumé by leaving comments. Owners can reply with follow-ups.
+- **Rate** feedback on your own résumé as helpful or not helpful.
+- **Reputation:** each reviewer has a page showing how often their feedback was rated helpful.
+- **Edit or delete** your own résumés and comments at any time.
 
-Use the same path when restarting so the app opens the same saved records.
+## Flask foundation setup
 
-If port 5001 is already in use, choose another port and use it in the URL too.
+See [the foundation setup and test guide](docs/FLASK_FOUNDATION.md) for local
+commands and the scope of the first backend PR. The hosted demo may run a later
+backend version than this foundation branch.
