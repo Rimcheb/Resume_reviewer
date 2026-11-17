@@ -12,6 +12,7 @@ from backend.models import Base, Comment, Resume, User
 from sqlalchemy.dialects.sqlite import insert
 from backend.models import CommentRating
 from backend.sqlite_upgrade import SCHEMA_VERSION, upgrade_db_command
+from backend.sqlite_upgrade import backup_db_command
 
 
 def configure_connection(connection, connection_record):
@@ -70,13 +71,15 @@ def init_app(app):
     app.teardown_appcontext(close_db)
     app.cli.add_command(init_db_command)
     app.cli.add_command(upgrade_db_command)
+    app.cli.add_command(backup_db_command)
 
 
 def user_data(user):
     """Copy a database object into a plain record that works outside a session."""
     if user is None:
         return None
-    return {"id": user.id, "email": user.email, "password_hash": user.password_hash}
+    return {"id": user.id, "email": user.email, "password_hash": user.password_hash,
+            "display_name": user.display_name or "Reviewer"}
 
 
 def get_user_by_email(email):
@@ -90,10 +93,10 @@ def get_user_by_id(user_id):
     return user_data(get_db().get(User, user_id))
 
 
-def create_user(email, password_hash):
+def create_user(email, password_hash, display_name=""):
     """Save one user atomically; return None if the email already exists."""
     db = get_db()
-    user = User(email=email, password_hash=password_hash)
+    user = User(email=email, password_hash=password_hash, display_name=display_name)
     db.add(user)
     try:
         db.flush()  # Get the new ID before committing and expiring the ORM object.
@@ -183,6 +186,7 @@ def comment_data(comment):
     return {
         "id": comment.id, "resume_id": comment.resume_id, "author_id": comment.author_id,
         "content": comment.content, "created_at": comment.created_at,
+        "pushes_exaggeration": comment.pushes_exaggeration,
     }
 
 
@@ -203,11 +207,13 @@ def create_comment(resume_id, author_id, content):
 
 def list_comments(resume_id):
     """Read only this resume's comments in a stable discussion order."""
-    query = select(Comment).where(Comment.resume_id == resume_id)
+    query = select(Comment, User.display_name).join(User, User.id == Comment.author_id).where(Comment.resume_id == resume_id)
     query = query.order_by(Comment.created_at, Comment.id)
     records = []
-    for comment in get_db().scalars(query):
-        records.append(comment_data(comment))
+    for comment, display_name in get_db().execute(query):
+        record = comment_data(comment)
+        record["author_display_name"] = display_name or "Reviewer"
+        records.append(record)
     return records
 
 
@@ -258,6 +264,21 @@ def update_comment(comment_id, content):
     if comment is None:
         return False
     comment.content = content
+    try:
+        db.commit()
+    except SQLAlchemyError:
+        db.rollback()
+        raise
+    return True
+
+
+def flag_exaggeration(comment_id, flagged):
+    """Set or clear the owner's 'pushes me to exaggerate' flag on one comment."""
+    db = get_db()
+    comment = db.get(Comment, comment_id)
+    if comment is None:
+        return False
+    comment.pushes_exaggeration = flagged
     try:
         db.commit()
     except SQLAlchemyError:
@@ -327,3 +348,45 @@ def list_ratings(resume_id):
     for rating in get_db().scalars(query):
         ratings[rating.comment_id] = rating.helpful
     return ratings
+
+
+def get_reputation(user_id):
+    """Derive counts in SQL so changes and deletions cannot leave stale totals."""
+    query = eligible_ratings().where(Comment.author_id == user_id)
+    query = query.with_only_columns(func.sum(CommentRating.helpful), func.count(CommentRating.id))
+    helpful, total = get_db().execute(query).one()
+    helpful = helpful or 0
+    percentage = None
+    if total:
+        percentage = round(100 * helpful / total)
+    return {"helpful": helpful, "total": total, "percentage": percentage}
+
+
+def is_ready():
+    """Check the database file, schema version and mapped columns without writing."""
+    if not Path(current_app.config["DATABASE"]).is_file():
+        return False
+    try:
+        with current_app.extensions["database_engine"].connect() as connection:
+            if connection.exec_driver_sql("PRAGMA user_version").scalar() != SCHEMA_VERSION:
+                return False
+            for table in Base.metadata.sorted_tables:
+                connection.execute(select(table).limit(0))
+    except SQLAlchemyError:
+        return False
+    return True
+
+
+def update_display_name(user_id, display_name):
+    """Save an account name atomically."""
+    db = get_db()
+    user = db.get(User, user_id)
+    if user is None:
+        return False
+    user.display_name = display_name
+    try:
+        db.commit()
+    except SQLAlchemyError:
+        db.rollback()
+        raise
+    return True

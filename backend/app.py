@@ -17,6 +17,13 @@ def health():
     return {"status": "ok"}
 
 
+def ready():
+    """Tell the host whether storage is ready without revealing connection details."""
+    if database.is_ready():
+        return {"status": "ready"}
+    return {"status": "unavailable"}, 503
+
+
 def create_app(config=None):
     """Make an app with optional settings, including the storage choice."""
     project_path = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -51,4 +58,5 @@ def create_app(config=None):
     application.register_blueprint(comments.bp)
     application.register_blueprint(ratings.bp)
     application.add_url_rule("/health", view_func=health)
+    application.add_url_rule("/ready", view_func=ready)
     return application
