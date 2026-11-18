@@ -9,7 +9,7 @@
 {% endif %}
 <p>All authenticated members can read your resume and feedback request.
     Remove contact details and anything you do not want to share before posting.</p>
-{% if error %}<p role="alert">{{ error }}</p>{% endif %}
+{% if error %}<p class="message-error" role="alert">{{ error }}</p>{% endif %}
 <form method="post" action="{{ url_for('resumes.edit', resume_id=resume.id) if resume else url_for('resumes.create') }}">
     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
     <label for="target_field">Target role or field</label>
