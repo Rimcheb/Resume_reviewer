@@ -36,6 +36,11 @@ textarea {
     resize: vertical;
 }
 
+textarea::placeholder {
+    color: var(--color-text-muted);
+    opacity: 1;
+}
+
 /* Keep keyboard focus visible against the input background. */
 textarea:focus {
     border-color: var(--color-focus-border);
