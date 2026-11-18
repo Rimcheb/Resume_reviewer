@@ -45,3 +45,11 @@ See .env.example for configuration names; it is a reference, not an automaticall
 loaded configuration file. Production must supply a stable secret through the host
 environment and use secure cookies over HTTPS. See docs/DATABASE_SETUP.md for
 initialization safeguards. Account routes are /register, /login and /account.
+
+## Submission branch
+
+After signing in, visit /resumes/new to submit résumé text, a target field and an
+optional feedback request. Submissions are visible to signed-in members. Existing
+databases require `flask --app app upgrade-db --backup /path/to/new-backup.sqlite`
+before using this branch. Never initialize over existing data. Browsing and posting
+comments arrive in #51/#52; display names are implemented separately in #112.

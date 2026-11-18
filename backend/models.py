@@ -1,4 +1,4 @@
-"""Map the existing users, resumes and comments tables without changing their rules."""
+"""Define the tables and constraints used for new databases and ORM queries."""
 
 from sqlalchemy import CheckConstraint, Column, ForeignKey, Integer, Text, func
 from sqlalchemy.orm import declarative_base
@@ -24,7 +24,11 @@ class Resume(Base):
     user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
     content = Column(Text, nullable=False)
     created_at = Column(Text, nullable=False, server_default=func.current_timestamp())
-    __table_args__ = (CheckConstraint(func.length(func.trim(content)) > 0),)
+    target_field = Column(Text, nullable=False, server_default="")
+    feedback_request = Column(Text, nullable=False, server_default="")
+    __table_args__ = (
+        CheckConstraint(func.length(func.trim(content)) > 0),
+    )
 
 
 class Comment(Base):
@@ -36,4 +40,6 @@ class Comment(Base):
     author_id = Column(Integer, ForeignKey("users.id"), nullable=False)
     content = Column(Text, nullable=False)
     created_at = Column(Text, nullable=False, server_default=func.current_timestamp())
-    __table_args__ = (CheckConstraint(func.length(func.trim(content)) > 0),)
+    __table_args__ = (
+        CheckConstraint(func.length(func.trim(content)) > 0),
+    )
