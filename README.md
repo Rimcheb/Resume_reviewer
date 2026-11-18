@@ -1,35 +1,47 @@
-# Run Resume Reviewer
+This is for CS162's final assignment.
 
-Use Python 3.12. Run commands from the project folder.
+# Resume Reviewer
 
-Windows PowerShell:
+Get honest, specific feedback on your résumé from peers who know your field, and give feedback in return.
 
-```powershell
-python -m venv .venv
-.venv\Scripts\python.exe -m pip install -r requirements.txt
-$env:SECRET_KEY = .venv\Scripts\python.exe -c "import secrets; print(secrets.token_hex(32))"
-$env:COOKIE_SECURE = "false"
-.venv\Scripts\python.exe -m flask --app app init-db
-.venv\Scripts\python.exe -m flask --app app run --port 5001
+[Live app](https://resumereviewer.pythonanywhere.com/)
+
+
+[Write up and Analysis](https://docs.google.com/document/d/1GaK4-kPtZVnA47MxypeM9CTyszr_W4Uas1ApG-ajEgU/edit?tab=t.0#heading=h.qcmfzo2b1jwy)
+
+
+[Survey](https://docs.google.com/forms/d/e/1FAIpQLSe4nhDJyu0zrM4oAXz20m8BwBwyqJhztEwccmk8yEmvaTgelQ/viewform?usp=publish-editor)
+
+## What it does
+
+Resume Reviewer is a free peer-review site. You post your résumé, say which field you're
+targeting and what you want feedback on, and other members review it.
+
+- **Submit** your résumé text with a target field and an optional feedback request.
+- **Browse** other members' résumés, newest first, and filter by field.
+- **Review** a résumé by leaving comments. Owners can reply with follow-ups.
+- **Rate** feedback on your own résumé as helpful or not helpful.
+- **Reputation:** each reviewer has a page showing how often their feedback was rated helpful.
+- **Edit or delete** your own résumés and comments at any time.
+
+## Flask foundation setup
+
+See [the foundation setup and test guide](docs/FLASK_FOUNDATION.md) for local
+commands and the scope of the first backend PR. The hosted demo may run a later
+backend version than this foundation branch.
+
+## Accounts branch setup
+
+Install requirements.txt, then set a generated secret once in your shell:
+
+```sh
+export SECRET_KEY="$(python -c 'import secrets; print(secrets.token_hex(32))')"
+export COOKIE_SECURE=false  # local HTTP only
+flask --app app init-db  # new database only
+flask --app app run
 ```
 
-macOS/Linux:
-
-```bash
-python3 -m venv .venv
-.venv/bin/python -m pip install -r requirements.txt
-export SECRET_KEY=$(.venv/bin/python -c "import secrets; print(secrets.token_hex(32))")
-export COOKIE_SECURE=false
-.venv/bin/python -m flask --app app init-db
-.venv/bin/python -m flask --app app run --port 5001
-```
-
-Run init-db only for a new database. It refuses existing tables. Keep existing data.
-The default file is instance/resume_reviewer.sqlite. To use another file, set
-DATABASE_PATH to an absolute filename before initialization and startup. Use the
-same path when restarting. Set environment variables in every new terminal.
-COOKIE_SECURE=false is for local HTTP; use true and a stable private SECRET_KEY
-for HTTPS hosting. Never commit secrets or database files.
-
-Open http://127.0.0.1:5001 and register, then log in. /health returns server status.
-If port 5001 is occupied, choose another port and update the URL.
+See .env.example for configuration names; it is a reference, not an automatically
+loaded configuration file. Production must supply a stable secret through the host
+environment and use secure cookies over HTTPS. See docs/DATABASE_SETUP.md for
+initialization safeguards. Account routes are /register, /login and /account.
