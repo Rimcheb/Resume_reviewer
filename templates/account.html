@@ -1,11 +1,18 @@
 {% extends "base.html" %}
 {% block title %}Your account | Resume Reviewer{% endblock %}
+{% block page_class %} narrow-page{% endblock %}
 {% block content %}
-<h2>Your account</h2>
-<p>You are logged in as {{ g.user["email"] }}.</p>
-<p><a href="{{ url_for('resumes.new') }}">Submit a resume</a></p>
-<form method="post" action="{{ url_for('auth.logout') }}">
-    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-    <button type="submit">Log out</button>
-</form>
+<header class="page-heading">
+    <div><h1>Your account</h1><p>Share your resume and get feedback from peers.</p></div>
+</header>
+<section class="card editor" aria-label="Account actions">
+    <p>Signed in as <strong>{{ g.user["email"] }}</strong></p>
+    <div class="form-actions">
+        <a class="action" href="{{ url_for('resumes.new') }}">Submit Resume</a>
+        <form method="post" action="{{ url_for('auth.logout') }}">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <button class="secondary-action" type="submit">Log out</button>
+        </form>
+    </div>
+</section>
 {% endblock %}

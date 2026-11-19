@@ -1,34 +1,44 @@
 {% extends "base.html" %}
 {% block title %}{{ "My Resumes" if is_mine else "Browse Resumes" }} | Resume Reviewer{% endblock %}
 {% block content %}
-<h2>{{ "My Resumes" if is_mine else "Browse Resumes" }}</h2>
-<p>Newest submissions appear first. Choose a request in a field you can help with.</p>
-<form method="get" action="{{ url_for(endpoint) }}">
+<header class="page-heading">
+    <div>
+        <h1>{{ "My Resumes" if is_mine else "Browse Resumes" }}</h1>
+        <p>{{ "See feedback on your submissions." if is_mine else "Choose a resume to review." }}</p>
+    </div>
+</header>
+<form class="card editor filter-form" method="get" action="{{ url_for(endpoint) }}">
     <label for="field">Filter by target role or field</label>
     <input id="field" name="field" value="{{ target_field }}" maxlength="{{ field_limit }}">
-    <button type="submit">Filter</button>
-    <a href="{{ url_for(endpoint) }}">Clear filter</a>
+    <div class="form-actions">
+        <button type="submit">Filter</button>
+        <a class="action secondary-action" href="{{ url_for(endpoint) }}">Clear filter</a>
+    </div>
 </form>
+<div class="resume-list">
 {% for resume in resumes %}
-<article>
-    <h3><a href="{{ url_for('resumes.detail', resume_id=resume.id) }}">{{ resume.target_field or "Resume" }} #{{ resume.id }}</a></h3>
-    <p>Submitted {{ resume.created_at }} (UTC)</p>
-    <p>{{ "Peer feedback received" if resume.has_peer_feedback else "Awaiting peer feedback" }}</p>
+<article class="card resume-summary">
+    <h2><a href="{{ url_for('resumes.detail', resume_id=resume.id) }}">{{ resume.target_field or "Resume" }} #{{ resume.id }}</a></h2>
+    <p class="note">Submitted {{ resume.created_at }} (UTC)</p>
+    <p class="note">{{ "Peer feedback received" if resume.has_peer_feedback else "Awaiting peer feedback" }}</p>
     {% if resume.feedback_request %}
     <p><strong>Requested feedback</strong></p>
-    <div style="white-space: pre-wrap; overflow-wrap: anywhere;">{{ resume.feedback_request }}</div>
+    <div class="feedback-request">{{ resume.feedback_request }}</div>
     {% endif %}
 </article>
 {% else %}
-<p>{{ "No resumes match this field." if target_field else "No resumes yet." }}</p>
+<p class="empty-state">{{ "No resumes match this field." if target_field else "No resumes yet." }}</p>
 {% endfor %}
-<nav aria-label="Resume pages">
+</div>
+{% if page > 1 or has_next %}
+<nav class="form-actions after-card" aria-label="Resume pages">
     {% if page > 1 %}
-    <a href="{{ url_for(endpoint, page=page-1, field=target_field) }}" rel="prev">Previous</a>
+    <a class="action secondary-action" href="{{ url_for(endpoint, page=page-1, field=target_field) }}" rel="prev">Previous</a>
     {% endif %}
     <span>Page {{ page }}</span>
     {% if has_next %}
-    <a href="{{ url_for(endpoint, page=page+1, field=target_field) }}" rel="next">Next</a>
+    <a class="action secondary-action" href="{{ url_for(endpoint, page=page+1, field=target_field) }}" rel="next">Next</a>
     {% endif %}
 </nav>
+{% endif %}
 {% endblock %}

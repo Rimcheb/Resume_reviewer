@@ -8,18 +8,24 @@
     <link rel="stylesheet" href="{{ url_for('static', filename='auth.css') }}">
 </head>
 <body>
-    <main class="container{% block page_class %}{% endblock %}">
-        <h1>Resume Reviewer</h1>
-        {% if g.user %}
-        <nav aria-label="Main navigation">
-            <a href="{{ url_for('resumes.feed') }}">Browse resumes</a> |
-            <a href="{{ url_for('resumes.mine') }}">My resumes</a> |
-            <a href="{{ url_for('resumes.new') }}">Submit a resume</a> |
-            <a href="{{ url_for('auth.account') }}">Your account</a>
-        </nav>
-        {% endif %}
+    <header class="app-header">
+        <div class="container app-bar">
+            <a class="brand" href="{{ url_for('auth.index') }}">
+                <svg class="icon" aria-hidden="true" viewBox="0 0 24 24"><path d="M14 3H5v18h14V8l-5-5Zm0 0v5h5M8 13h8m-8 4h5"/></svg>
+                Resume Reviewer
+            </a>
+            {% if g.user %}
+            <nav class="app-nav" aria-label="Main navigation">
+                {% for endpoint, label in [('resumes.feed', 'Browse'), ('resumes.mine', 'My Resumes'), ('resumes.new', 'Submit Resume'), ('auth.account', 'Account')] %}
+                <a href="{{ url_for(endpoint) }}"{% if request.endpoint == endpoint or (endpoint == 'resumes.new' and request.endpoint == 'resumes.create') %} aria-current="page"{% endif %}>{{ label }}</a>
+                {% endfor %}
+            </nav>
+            {% endif %}
+        </div>
+    </header>
+    <main class="container page{% block page_class %}{% endblock %}">
         {% for message in get_flashed_messages() %}
-        <p role="status">{{ message }}</p>
+        <p class="message" role="status">{{ message }}</p>
         {% endfor %}
         {% block content %}{% endblock %}
     </main>

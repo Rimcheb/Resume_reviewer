@@ -1,33 +1,35 @@
 {% extends "base.html" %}
 {% block title %}{{ "Edit" if resume else "Submit" }} Resume | Resume Reviewer{% endblock %}
+{% block page_class %} submit-page{% endblock %}
 {% block content %}
-<h2>{{ "Edit" if resume else "Submit" }} your resume</h2>
-{% if resume %}
-<p>Existing comments will stay. They may refer to an earlier version of your text.</p>
-{% else %}
-<p>Paste your resume below to get feedback.</p>
-{% endif %}
-<p>All authenticated members can read your resume and feedback request.
-    Remove contact details and anything you do not want to share before posting.</p>
+<header class="page-heading">
+    <span class="heading-icon">
+        <svg class="icon" aria-hidden="true" viewBox="0 0 24 24"><path d="M7 3h10v18H7zM10 10h4m-2-2v4m-2 4h4"/></svg>
+    </span>
+    <div>
+        <h1>{{ "Edit Resume" if resume else "Submit Resume" }}</h1>
+        <p>{{ "Existing comments may refer to an earlier version." if resume else "Share your resume for peer feedback." }}</p>
+    </div>
+</header>
 {% if error %}<p role="alert">{{ error }}</p>{% endif %}
-<form method="post" action="{{ url_for('resumes.edit', resume_id=resume.id) if resume else url_for('resumes.create') }}">
+<form class="card editor" method="post" action="{{ url_for('resumes.edit', resume_id=resume.id) if resume else url_for('resumes.create') }}">
     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <p class="note">Members can read your resume and feedback request. Remove private details before posting.</p>
     <label for="target_field">Target role or field</label>
     <input id="target_field" name="target_field" value="{{ target_field }}"
-           maxlength="{{ field_limit }}" required>
-    <p class="note">Up to {{ field_limit }} characters, such as Software engineering.</p>
+           maxlength="{{ field_limit }}" placeholder="e.g. Software engineering" aria-describedby="field-limit" required>
+    <p class="note" id="field-limit">Up to {{ field_limit }} characters.</p>
 
     <label for="feedback_request">What would you like feedback on? (optional)</label>
     <textarea id="feedback_request" name="feedback_request" rows="3"
-              maxlength="{{ feedback_limit }}">{{ feedback_request }}</textarea>
-    <p class="note">Up to {{ feedback_limit }} characters.</p>
+              maxlength="{{ feedback_limit }}" aria-describedby="feedback-limit">{{ feedback_request }}</textarea>
+    <p class="note" id="feedback-limit">Up to {{ feedback_limit }} characters.</p>
 
     <label for="resume">Your Resume</label>
     <textarea id="resume" name="resume" rows="12" maxlength="{{ resume_limit }}"
-              placeholder="Paste your resume here..." required>{{ content }}</textarea>
-    <p class="note">Up to {{ resume_limit }} characters. Text only.</p>
+              placeholder="Paste your resume here..." aria-describedby="resume-limit" required>{{ content }}</textarea>
+    <p class="note" id="resume-limit">Plain text, up to {{ resume_limit }} characters.</p>
     <button type="submit">{{ "Save changes" if resume else "Submit Resume" }}</button>
 </form>
 {% if resume %}<p><a href="{{ url_for('resumes.detail', resume_id=resume.id) }}">Back to resume</a></p>{% endif %}
-<p><a href="{{ url_for('auth.account') }}">Your account</a></p>
 {% endblock %}

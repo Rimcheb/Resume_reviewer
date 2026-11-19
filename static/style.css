@@ -1,62 +1,246 @@
-/* Load shared tokens once so page styles use the same design values. */
 @import url("tokens.css");
 
-/* Shared page defaults and content width can support additional pages. */
+* {
+    box-sizing: border-box;
+}
+
 body {
     margin: 0;
-    font-family: var(--font-body);
     color: var(--color-text);
     background: var(--color-background);
+    font: var(--text-md)/var(--line-height-normal) var(--font-body);
+}
+
+h1, h2, h3, p {
+    margin: 0;
+}
+
+h1, h2, h3 {
+    font-family: var(--font-heading);
+    line-height: var(--line-height-tight);
+}
+
+h1 {
+    font-size: clamp(var(--text-2xl), 5vw, 3rem);
+    letter-spacing: -0.035em;
+}
+
+h2 {
+    font-size: var(--text-xl);
+    margin-bottom: var(--space-4);
+}
+
+h3 {
+    font-size: var(--text-md);
+}
+
+a {
+    color: var(--color-primary);
+    text-underline-offset: 0.2em;
 }
 
 .container {
-    max-width: 700px;
-    margin: 60px auto;
-    padding: var(--space-6);
+    width: min(100% - 2rem, 72rem);
+    margin-inline: auto;
     overflow-wrap: anywhere;
 }
 
-/* Shared form controls also support future resume and comment forms. */
-form {
-    display: flex;
-    flex-direction: column;
-    gap: var(--space-3);
-    padding: var(--space-6);
+.app-header {
     background: var(--color-surface);
-    border-radius: var(--radius-md);
+    border-bottom: 1px solid var(--color-border);
 }
 
-textarea {
-    min-width: 0;
-    padding: var(--space-4);
+.app-bar, .brand, .app-nav, .page-heading, .form-actions {
+    display: flex;
+    align-items: center;
+}
+
+.app-bar {
+    flex-wrap: wrap;
+    justify-content: space-between;
+    gap: var(--space-3);
+    padding-block: var(--space-3);
+}
+
+.brand {
+    gap: var(--space-2);
     color: var(--color-text);
-    background: var(--color-input-background);
-    border: 1px solid var(--color-input-border);
-    border-radius: var(--radius-md);
-    font: inherit;
-    resize: vertical;
+    font-weight: 800;
+    text-decoration: none;
 }
 
-/* Keep keyboard focus visible against the input background. */
-textarea:focus {
-    border-color: var(--color-focus-border);
+.icon {
+    width: 1.5rem;
+    height: 1.5rem;
+    flex: none;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 1.8;
+    stroke-linejoin: round;
+    stroke-linecap: round;
+}
+
+.brand .icon {
+    color: var(--color-accent);
+}
+
+.app-nav {
+    gap: var(--space-2);
+    flex-wrap: wrap;
+}
+
+.app-nav a, .action, button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 44px;
+    padding: var(--space-2) var(--space-4);
+    border-radius: var(--radius-pill);
+    font: inherit;
+    font-weight: 700;
+    text-align: center;
+}
+
+.app-nav a {
+    color: var(--color-primary);
+    text-decoration: none;
+    background: var(--color-tint);
+}
+
+.app-nav a:hover, .action:hover {
+    text-decoration: underline;
+    text-underline-offset: 0.2em;
+}
+
+.app-nav a[aria-current="page"] {
+    color: var(--color-surface);
+    background: var(--color-primary);
+}
+
+.app-nav a[aria-current="page"]:is(:hover, :active),
+.action:not(.secondary-action):is(:hover, :active),
+button:enabled:is(:hover, :active) {
+    background: var(--color-primary-hover);
+}
+
+a:focus-visible, button:focus-visible, textarea:focus, input:focus {
     outline: 2px solid var(--color-focus-border);
-    outline-offset: 2px;
+    outline-offset: 3px;
     box-shadow: var(--focus-ring);
 }
 
-button {
-    padding: var(--space-3);
-    background: var(--color-primary);
-    color: white;
-    border: none;
+.page {
+    padding-block: clamp(var(--space-6), 5vw, 4rem);
+}
+
+.submit-page {
+    max-width: 52rem;
+}
+
+.page-heading {
+    gap: var(--space-4);
+    margin-bottom: var(--space-6);
+}
+
+.page-heading p {
+    color: var(--color-text-muted);
+    margin-top: var(--space-1);
+}
+
+.heading-icon {
+    display: grid;
+    place-items: center;
+    flex: none;
+    width: 3rem;
+    height: 3rem;
+    color: var(--color-primary);
+    background: var(--color-accent-surface);
+    border-radius: var(--radius-pill);
+}
+
+.card {
+    min-width: 0;
+    padding: clamp(var(--space-4), 4vw, var(--space-8));
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-card);
+}
+
+.editor, .review-grid, .comment-list, .resume-list, .resume-summary, .comment {
+    display: grid;
+    gap: var(--space-3);
+}
+
+.editor label {
+    font-weight: 750;
+}
+
+textarea, input:not([type="hidden"]) {
+    width: 100%;
+    min-width: 0;
+    min-height: 44px;
+    padding: var(--space-4);
+    border: 1px solid var(--color-input-border);
     border-radius: var(--radius-md);
+    background: var(--color-input-background);
+    color: var(--color-text);
     font: inherit;
 }
 
-/* Match the visual state to the native disabled attribute in the HTML. */
+textarea {
+    resize: vertical;
+}
+
+textarea:focus, input:not([type="hidden"]):focus {
+    border-color: var(--color-focus-border);
+}
+
+.submit-page #resume {
+    height: clamp(12rem, 40vh, 22rem);
+}
+
+::placeholder, .note, .empty-state {
+    color: var(--color-text-muted);
+    opacity: 1;
+}
+
+.form-actions {
+    flex-wrap: wrap;
+    gap: var(--space-2) var(--space-3);
+}
+
+.action, button {
+    border: 1px solid transparent;
+    color: var(--color-surface);
+    background: var(--color-primary);
+}
+
+.action {
+    text-decoration: none;
+}
+
+button:enabled {
+    cursor: pointer;
+}
+
+.editor > button {
+    justify-self: start;
+}
+
+.secondary-action, button.secondary-action:enabled:is(:hover, :active) {
+    color: var(--color-primary);
+    background: var(--color-tint);
+}
+
+.secondary-action:hover {
+    border-color: var(--color-primary);
+}
+
 button:disabled {
-    opacity: 0.6;
+    border-color: var(--color-border);
+    color: var(--color-text-muted);
+    background: var(--color-disabled-surface);
     cursor: not-allowed;
 }
 
@@ -64,109 +248,124 @@ button:disabled {
     font-size: var(--text-sm);
 }
 
-/* Reduce outer spacing on narrow screens to leave room for the form. */
-@media (max-width: 600px) {
-    .container {
-        margin: 20px auto;
-        padding: var(--space-4);
-    }
-}
-
-.container.review-page { max-width: 1100px; }
-.resume-review .feedback-request { white-space: pre-wrap; }
-
-/* Review page sections reuse the shared container, form, and design variables. */
-.resume-review {
-    max-width: 1100px;
-    line-height: 1.5;
-}
-
-.resume-review section {
-    min-width: 0;
-}
-
-.resume-review .back-link {
-    color: var(--color-primary);
-    text-underline-offset: 0.2em;
-}
-
-.resume-review .back-link:focus-visible {
-    outline: 2px solid var(--color-primary);
-    outline-offset: 3px;
-}
-
-.resume-review section + section {
-    margin-top: var(--space-6);
-}
-
-/* Preserve pasted line breaks and wrap long text within narrow screens. */
-.resume-review .resume-text,
-.resume-review .comment-text {
-    white-space: pre-wrap;
-    overflow-wrap: anywhere;
-    padding: var(--space-4);
+.message, [role="alert"] {
+    margin-block: var(--space-4);
+    padding: var(--space-3) var(--space-4);
     border: 1px solid var(--color-border);
     border-radius: var(--radius-md);
+    background: var(--color-tint);
 }
 
-/* Give plain resume text the spacing and surface of a document. */
-.resume-review .resume-text {
-    padding: var(--space-6);
-    background: var(--color-background);
-    line-height: 1.7;
-    box-shadow: 0 2px 6px var(--color-border);
-}
-
-.resume-review .comment-text {
+[role="alert"] {
+    color: var(--color-error);
     background: var(--color-surface);
 }
 
-.resume-review .comment-list {
+.after-card, .resume-list, .document .feedback-request + .resume-text {
+    margin-top: var(--space-4);
+}
+
+.resume-summary h2 {
+    margin-bottom: 0;
+}
+
+.review-grid {
+    gap: var(--space-6);
+    align-items: start;
+}
+
+.feedback {
+    background: var(--color-tint);
+}
+
+.comment-list {
     list-style: none;
     margin: 0;
     padding: 0;
+}
+
+.comment-author {
     display: flex;
-    flex-direction: column;
-    gap: var(--space-3);
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--space-1) var(--space-2);
 }
 
-/* Keep the editable field inside its form, including on mobile screens. */
-.resume-review textarea {
-    box-sizing: border-box;
-    width: 100%;
-    min-width: 0;
+.owner-badge {
+    padding: var(--space-1) var(--space-2);
+    border-radius: var(--radius-pill);
+    color: var(--color-primary-hover);
+    background: var(--color-accent-surface);
+    font-size: var(--text-xs);
+    font-weight: 700;
+    line-height: var(--line-height-tight);
 }
 
-.resume-review form .note {
-    margin: 0;
+.resume-text, .comment-text, .empty-state, .feedback-request {
+    padding: var(--space-4);
+    border-radius: var(--radius-md);
 }
 
-/* Keep reading order on small screens; place feedback beside the document on desktop. */
-@media (min-width: 900px) {
-    .resume-review {
-        display: grid;
-        grid-template-columns: minmax(0, 3fr) minmax(0, 2fr);
-        grid-template-rows: auto auto 1fr;
-        gap: var(--space-6);
-        align-items: start;
+.resume-text, .comment-text, .feedback-request {
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+    border: 1px solid var(--color-border);
+}
+
+.resume-text {
+    background: var(--color-background);
+    line-height: 1.7;
+}
+
+.comment-text {
+    background: var(--color-surface);
+}
+
+.empty-state {
+    display: grid;
+    place-items: center;
+    min-height: 5rem;
+    border: 1px dashed var(--color-input-border);
+    text-align: center;
+}
+
+.feedback-request {
+    margin-top: var(--space-2);
+    background: var(--color-tint);
+}
+
+.comment-editor {
+    margin-top: var(--space-6);
+    padding-top: var(--space-4);
+    border-top: 1px solid var(--color-border);
+}
+
+@media (max-width: 32rem) {
+    .app-nav {
+        width: 100%;
     }
 
-    .resume-review .review-header {
+    .app-nav a {
+        flex: 1 1 auto;
+        padding-inline: var(--space-2);
+    }
+
+    .editor > button {
+        justify-self: stretch;
+    }
+}
+
+@media (min-width: 54rem) {
+    .filter-form {
+        grid-template-columns: minmax(0, 1fr) auto;
+        align-items: center;
+    }
+
+    .filter-form label {
         grid-column: 1 / -1;
     }
 
-    .resume-review .review-header h2 {
-        margin-bottom: 0;
-    }
-
-    .resume-review .resume-section {
-        grid-column: 1;
-        grid-row: 2 / 4;
-    }
-
-    .resume-review .comments-section,
-    .resume-review .comment-form-section {
-        grid-column: 2;
-        margin-top: 0;
+    .review-grid {
+        grid-template-columns: minmax(0, 3fr) minmax(0, 2fr);
     }
 }
