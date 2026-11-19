@@ -36,9 +36,18 @@ textarea {
     resize: vertical;
 }
 
+textarea::placeholder {
+    color: var(--color-text-muted);
+    opacity: 1;
+}
+
 /* Keep keyboard focus visible against the input background. */
 textarea:focus {
     border-color: var(--color-focus-border);
+}
+
+textarea:focus,
+button:focus-visible {
     outline: 2px solid var(--color-focus-border);
     outline-offset: 2px;
     box-shadow: var(--focus-ring);
@@ -162,6 +171,12 @@ button:disabled {
 @media (max-width: 600px) {
     .container {
         margin: 20px auto;
+        padding: var(--space-4);
+        overflow-wrap: anywhere;
+    }
+
+    form,
+    .resume-review .resume-text {
         padding: var(--space-4);
     }
 }

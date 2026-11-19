@@ -27,7 +27,7 @@
 
   /* ---------- Form inputs (resume text areas, comment boxes) ---------- */
   --color-input-background: #ffffff;  /* inside text inputs and text areas */
-  --color-input-border: #8c959f;      /* default input outline */
+  --color-input-border: var(--color-text-muted); /* default input outline */
   --color-focus-border: #2f5d8a;      /* input outline while typing in it */
   --focus-ring: 0 0 0 3px rgba(47, 93, 138, 0.25); /* soft glow around a focused input */
 
