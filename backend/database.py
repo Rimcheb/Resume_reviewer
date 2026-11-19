@@ -34,3 +34,8 @@ def create_resume(user_id, content, target_field, feedback_request):
 def get_resume_by_id(resume_id):
     """Return a resume record, or None when it does not exist."""
     return current_app.extensions["storage"].get_resume_by_id(resume_id)
+
+
+def list_resumes(user_id=None, target_field="", limit=10, offset=0):
+    """Return newest first; match literal field substrings after Python lower()."""
+    return current_app.extensions["storage"].list_resumes(user_id, target_field, limit, offset)
