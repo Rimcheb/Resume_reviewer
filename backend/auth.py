@@ -42,7 +42,7 @@ def register():
                 error = "That email is already registered."
                 status = 409
             else:
-                flash("Your account is ready.")
+                flash("Your account is ready.", "success")
                 return redirect(url_for("auth.login"), code=303)
         if status == 200:
             status = 400

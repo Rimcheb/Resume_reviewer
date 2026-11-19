@@ -1,54 +1,55 @@
 {% extends "base.html" %}
 {% block title %}Resume {{ resume.id }} | Resume Reviewer{% endblock %}
-{% block page_class %} review-page{% endblock %}
 {% block content %}
-<div class="resume-review">
-    <header class="review-header">
-        <p><a class="back-link" href="{{ url_for('resumes.new') }}">Back to Submit Resume</a></p>
-        <h2>{{ resume.target_field or "Review Resume" }}</h2>
-        <p>Submitted {{ resume.created_at }} (UTC)</p>
-        <p>{{ "Peer feedback received" if resume.has_peer_feedback else "Awaiting peer feedback" }}</p>
-    </header>
+<header class="page-heading">
+    <span class="heading-icon">
+        <svg class="icon" aria-hidden="true" viewBox="0 0 24 24"><path d="M4 4h16v12H9l-5 4V4Zm4 5h8m-8 3h5"/></svg>
+    </span>
+    <div>
+        <h1>{{ resume.target_field or "Review Resume" }}</h1>
+        <p class="note">Submitted {{ resume.created_at }} (UTC) · {{ "Peer feedback received" if resume.has_peer_feedback else "Awaiting peer feedback" }}</p>
+    </div>
+</header>
 
-    <section class="resume-section" aria-labelledby="resume-heading">
+<div class="review-grid">
+    <section class="card document" aria-labelledby="resume-heading">
+        <h2 id="resume-heading">Resume</h2>
         {% if resume.feedback_request %}
         <h3>Requested feedback</h3>
         <div class="feedback-request">{{ resume.feedback_request }}</div>
         {% endif %}
-        <h3 id="resume-heading">Resume</h3>
         <!-- Jinja escapes user text; CSS preserves line breaks. -->
         <div class="resume-text">{{ resume.content }}</div>
-
     </section>
 
-    <section class="comments-section" aria-labelledby="comments-heading">
-        <h3 id="comments-heading">Discussion</h3>
-        <p>Comments are shown with the current resume and may refer to an earlier version.</p>
-        <ul class="comment-list">
+    <section class="card feedback" aria-labelledby="comments-heading">
+        <h2 id="comments-heading">Feedback</h2>
+        {% set months = ("Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec") %}
+        <ul class="comment-list" role="list">
             {% for comment in comments %}
             <li>
-                <article id="comment-{{ comment.id }}">
-                    <p>Member {{ comment.author_id }}{% if comment.author_id == resume.user_id %} (resume owner){% endif %}
-                        — {{ comment.created_at }} (UTC)</p>
+                <article class="comment" id="comment-{{ comment.id }}">
+                    <header>
+                        <p class="comment-author">
+                            <strong>Member {{ comment.author_id }}</strong>
+                            {% if comment.author_id == resume.user_id %}<span class="owner-badge">Owner</span>{% endif %}
+                        </p>
+                        {# SQLite supplies a UTC timestamp as YYYY-MM-DD HH:MM:SS. #}
+                        <time class="note" datetime="{{ comment.created_at | replace(' ', 'T') }}Z">
+                            {{ months[(comment.created_at[5:7] | int) - 1] }} {{ comment.created_at[8:10] | int }}, {{ comment.created_at[:4] }}
+                        </time>
+                    </header>
                     <div class="comment-text">{{ comment.content }}</div>
-
-
-
                 </article>
             </li>
             {% else %}
-            <li class="note">No comments yet.</li>
+            <li class="empty-state">No comments yet.</li>
             {% endfor %}
         </ul>
-    </section>
-
-    <section class="comment-form-section" aria-labelledby="write-comment-heading">
-        <h3 id="write-comment-heading">Add feedback or a follow-up</h3>
-        <form method="post" action="{{ url_for('comments.create', resume_id=resume.id) }}">
+        <form class="editor comment-editor" method="post" action="{{ url_for('comments.create', resume_id=resume.id) }}">
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-            <label for="comment">Your comment</label>
-            <p id="comment-instructions" class="note">For useful feedback, identify the passage or problem,
-                explain why it matters, and suggest a concrete improvement. Questions and owner follow-ups are welcome.</p>
+            <label for="comment">Add feedback or a follow-up</label>
+            <p id="comment-instructions" class="note">Name a section and suggest a specific improvement.</p>
             <textarea id="comment" name="comment" rows="6" maxlength="{{ comment_limit }}" required
                 aria-describedby="comment-instructions comment-limit"
                 placeholder="For example, add a measurable result to your most recent role."></textarea>
