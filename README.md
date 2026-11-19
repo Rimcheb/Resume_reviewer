@@ -29,3 +29,19 @@ targeting and what you want feedback on, and other members review it.
 See [the foundation setup and test guide](docs/FLASK_FOUNDATION.md) for local
 commands and the scope of the first backend PR. The hosted demo may run a later
 backend version than this foundation branch.
+
+## Accounts branch setup
+
+Install requirements.txt, then set a generated secret once in your shell:
+
+```sh
+export SECRET_KEY="$(python -c 'import secrets; print(secrets.token_hex(32))')"
+export COOKIE_SECURE=false  # local HTTP only
+flask --app app init-db  # new database only
+flask --app app run
+```
+
+See .env.example for configuration names; it is a reference, not an automatically
+loaded configuration file. Production must supply a stable secret through the host
+environment and use secure cookies over HTTPS. See docs/DATABASE_SETUP.md for
+initialization safeguards. Account routes are /register, /login and /account.

@@ -25,7 +25,7 @@ form {
     border-radius: var(--radius-md);
 }
 
-textarea {
+input:not([type="hidden"]), textarea {
     min-width: 0;
     padding: var(--space-4);
     color: var(--color-text);
@@ -37,7 +37,7 @@ textarea {
 }
 
 /* Keep keyboard focus visible against the input background. */
-textarea:focus {
+input:not([type="hidden"]):focus-visible, textarea:focus-visible {
     border-color: var(--color-focus-border);
     outline: 2px solid var(--color-focus-border);
     outline-offset: 2px;
@@ -165,3 +165,7 @@ button:disabled {
         padding: var(--space-4);
     }
 }
+
+.message-error, .message-success { padding: var(--space-3); border: 1px solid currentColor; border-radius: var(--radius-sm); }
+.message-error { color: var(--color-error); }
+.message-success { color: var(--color-success); }
