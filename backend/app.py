@@ -1,7 +1,9 @@
-"""Create the Flask application before connecting individual backend features."""
+"""Create the Flask application and initialize its configured storage."""
 
 import os
 from flask import Flask
+
+from backend import database, sqlite_storage
 
 
 def health():
@@ -18,7 +20,12 @@ def create_app(config=None):
         static_folder=os.path.join(project_path, "static"),
         instance_path=os.path.join(project_path, "instance"),
     )
+    application.config["DATABASE"] = os.getenv(
+        "DATABASE_PATH", os.path.join(application.instance_path, "resume_reviewer.sqlite")
+    )
+    application.config["STORAGE_BACKEND"] = sqlite_storage
     if config is not None:
         application.config.update(config)
+    database.init_app(application)
     application.add_url_rule("/health", view_func=health)
     return application
