@@ -1,0 +1,13 @@
+services:
+  web:
+    build: .
+    ports:
+      - "127.0.0.1:5001:10000"
+    environment:
+      SECRET_KEY: local-docker-demo-only
+      COOKIE_SECURE: "false"
+      DATABASE_PATH: /app/instance/resume_reviewer.sqlite
+    volumes:
+      - resume-data:/app/instance
+volumes:
+  resume-data:
