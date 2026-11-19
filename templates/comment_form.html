@@ -8,7 +8,7 @@
         <p>Feedback on <a href="{{ url_for('resumes.detail', resume_id=resume.id) }}">{{ resume.target_field or "Resume" }}</a></p>
     </div>
 </header>
-{% if error %}<p role="alert">{{ error }}</p>{% endif %}
+{% if error %}<p class="message-error" role="alert">{{ error }}</p>{% endif %}
 <form class="card editor" method="post" action="{{ url_for('comments.edit', comment_id=comment.id) if comment else url_for('comments.create', resume_id=resume.id) }}">
     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
     <label for="comment">Your comment</label>

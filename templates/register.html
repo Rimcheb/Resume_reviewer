@@ -5,7 +5,7 @@
 <header class="page-heading">
     <div><h1>Create an account</h1><p>Share your resume and get feedback from peers.</p></div>
 </header>
-{% if error %}<p role="alert">{{ error }}</p>{% endif %}
+{% if error %}<p class="message-error" role="alert">{{ error }}</p>{% endif %}
 <form class="card editor" method="post" action="{{ url_for('auth.register') }}">
     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
     <label for="email">Email</label>

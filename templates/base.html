@@ -24,8 +24,8 @@
         </div>
     </header>
     <main class="container page{% block page_class %}{% endblock %}">
-        {% for message in get_flashed_messages() %}
-        <p class="message" role="status">{{ message }}</p>
+        {% for category, message in get_flashed_messages(with_categories=true) %}
+        <p class="message{% if category in ('error', 'success') %} message-{{ category }}{% endif %}" role="status">{{ message }}</p>
         {% endfor %}
         {% block content %}{% endblock %}
     </main>

@@ -248,7 +248,7 @@ button:disabled {
     font-size: var(--text-sm);
 }
 
-.message, [role="alert"] {
+.message, .message-error, .message-success, [role="alert"] {
     margin-block: var(--space-4);
     padding: var(--space-3) var(--space-4);
     border: 1px solid var(--color-border);
@@ -256,8 +256,18 @@ button:disabled {
     background: var(--color-tint);
 }
 
-[role="alert"] {
+[role="alert"], .message-error {
     color: var(--color-error);
+    background: var(--color-surface);
+}
+
+.message-error {
+    border-color: var(--color-error);
+}
+
+.message-success {
+    color: var(--color-success);
+    border-color: var(--color-success);
     background: var(--color-surface);
 }
 

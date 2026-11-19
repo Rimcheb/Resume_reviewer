@@ -11,7 +11,7 @@
         <p>{{ "Existing comments may refer to an earlier version." if resume else "Share your resume for peer feedback." }}</p>
     </div>
 </header>
-{% if error %}<p role="alert">{{ error }}</p>{% endif %}
+{% if error %}<p class="message-error" role="alert">{{ error }}</p>{% endif %}
 <form class="card editor" method="post" action="{{ url_for('resumes.edit', resume_id=resume.id) if resume else url_for('resumes.create') }}">
     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
     <p class="note">Members can read your resume and feedback request. Remove private details before posting.</p>
