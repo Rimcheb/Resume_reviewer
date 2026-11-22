@@ -18,13 +18,14 @@
                 id="resume"
                 name="resume"
                 rows="12"
+                aria-describedby="submission-status"
                 placeholder="Paste your resume here..."
                 required
             ></textarea>
 
             <!-- Keep submission disabled until a backend can handle the resume. -->
-            <button type="button" disabled>Submit Resume</button>
-            <p class="note">Resume submission will be available once the backend is connected.</p>
+            <button type="button" disabled aria-describedby="submission-status">Submit Resume</button>
+            <p id="submission-status" class="note">Resume submission will be available once the backend is connected.</p>
         </form>
     </main>
 </body>
