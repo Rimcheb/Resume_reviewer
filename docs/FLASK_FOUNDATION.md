@@ -32,3 +32,13 @@ suite; these foundation tests are intentionally runnable before those features.
 
 The project overview in README.md and the project plan from main are preserved.
 The deployment checker from PR #58 remains a separate read-only tool.
+
+## Render startup
+
+Use the Python runtime with build command `pip install -r requirements.txt`.
+Set the service's Start Command to `sh scripts/start_render.sh` and its
+Health Check Path to `/health`. Save and redeploy after merging this change.
+
+The script starts Gunicorn using the factory in app.py and Render's assigned
+PORT. This verifies the foundation server. The full app routes and persistent
+hosted database must be integrated before this service can replace the demo.
