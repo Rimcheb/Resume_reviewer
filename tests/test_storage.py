@@ -10,7 +10,7 @@ class StorageTests(unittest.TestCase):
     def test_explicit_initialization_preserves_existing_rows_and_constraints(self):
         with tempfile.TemporaryDirectory() as folder:
             path=Path(folder)/'db.sqlite'
-            app=create_app({'TESTING':True,'DATABASE':str(path)})
+            app=create_app({'TESTING':True,'SECRET_KEY':'test-only','DATABASE':str(path)})
             try:
                 self.assertFalse(path.exists())
                 runner=app.test_cli_runner()
