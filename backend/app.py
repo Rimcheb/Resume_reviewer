@@ -1,15 +1,25 @@
 """Create the web app and connect its small components."""
 
 import os
+from datetime import datetime
 from flask import Flask, render_template
 from flask_wtf.csrf import CSRFError, CSRFProtect
 
-from backend import auth, database, sqlite_storage
+from backend import auth, database, resumes, sqlite_storage
 
 
 def csrf_error(error):
     """Ask the user to reload an expired or invalid form."""
     return render_template("error.html", message="Please reload the form and try again."), 400
+
+
+def readable_date(value):
+    """Format SQLite/ISO dates for readers while leaving unknown values intact."""
+    try:
+        parsed = datetime.fromisoformat(str(value).replace("Z", "+00:00"))
+    except (ValueError, TypeError):
+        return value
+    return f"{parsed.strftime('%b')} {parsed.day}, {parsed.year}"
 
 
 def health():
@@ -43,9 +53,11 @@ def create_app(config=None):
     if not application.config["SECRET_KEY"]:
         raise RuntimeError("Set SECRET_KEY before starting the app.")
 
+    application.add_template_filter(readable_date, "readable_date")
     database.init_app(application)
     CSRFProtect(application)
     application.register_error_handler(CSRFError, csrf_error)
     application.register_blueprint(auth.bp)
+    application.register_blueprint(resumes.bp)
     application.add_url_rule("/health", view_func=health)
     return application

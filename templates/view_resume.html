@@ -1,59 +1,47 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Review Resume | Resume Reviewer</title>
-    <link rel="stylesheet" href="../static/style.css">
-</head>
-<body>
-    <main class="container resume-review">
-        <header class="review-header">
-            <a class="back-link" href="/submit">Back to Submit Resume</a>
-            <h1>Review Resume</h1>
-        </header>
+{% extends "base.html" %}
+{% block title %}Resume {{ resume.id }} | Resume Reviewer{% endblock %}
+{% block page_class %} review-page{% endblock %}
+{% block content %}
+<div class="resume-review">
+    <header class="review-header">
+        <p><a class="back-link" href="{{ url_for('resumes.new') }}">Submit another résumé</a></p>
+        <h2>{{ resume.target_field or "Review Resume" }}</h2>
+        <p>Submitted <time title="{{ resume.created_at }} UTC">{{ resume.created_at | readable_date }}</time></p>
+        <p>{{ "Peer feedback received" if resume.has_peer_feedback else "Awaiting peer feedback" }}</p>
+    </header>
 
-        {# Flask context: resume = {"content": "resume text"} or None;
-           comments = [{"content": "feedback text"}] or []. Both may be omitted. #}
-        <section class="resume-section" aria-labelledby="resume-heading">
-            <h2 id="resume-heading">Resume</h2>
-            {% if resume is defined and resume and resume.content is defined and resume.content %}
-            <!-- Escape user text; CSS preserves its line breaks without rendering HTML. -->
-            <div class="resume-text">{{ resume.content | e }}</div>
+    <section class="resume-section" aria-labelledby="resume-heading">
+        {% if resume.feedback_request %}
+        <h3>Requested feedback</h3>
+        <div class="feedback-request">{{ resume.feedback_request }}</div>
+        {% endif %}
+        <h3 id="resume-heading">Resume</h3>
+        <!-- Jinja escapes user text; CSS preserves line breaks. -->
+        <div class="resume-text">{{ resume.content }}</div>
+
+    </section>
+
+    <section class="comments-section" aria-labelledby="comments-heading">
+        <h3 id="comments-heading">Discussion</h3>
+        <p>Comments are shown with the current resume and may refer to an earlier version.</p>
+        <ul class="comment-list">
+            {% for comment in comments %}
+            <li>
+                <article id="comment-{{ comment.id }}">
+                    <p>Member {{ comment.author_id }}{% if comment.author_id == resume.user_id %} (resume owner){% endif %}
+                        — <time title="{{ comment.created_at }} UTC">{{ comment.created_at | readable_date }}</time></p>
+                    <div class="comment-text">{{ comment.content }}</div>
+
+
+
+                </article>
+            </li>
             {% else %}
-            <p class="note">No resume is available to review yet.</p>
-            {% endif %}
-        </section>
+            <li class="note">No comments yet.</li>
+            {% endfor %}
+        </ul>
+    </section>
 
-        <!-- Existing feedback follows the resume in reading order. -->
-        <section class="comments-section" aria-labelledby="comments-heading">
-            <h2 id="comments-heading">Comments</h2>
-            <ul class="comment-list">
-                {% for comment in comments | default([], true) %}
-                <li class="comment-text">{{ comment.content | e }}</li>
-                {% else %}
-                <li class="note">No comments yet.</li>
-                {% endfor %}
-            </ul>
-        </section>
-
-        <!-- Posting stays disabled until a backend submission handler is connected. -->
-        <section class="comment-form-section" aria-labelledby="write-comment-heading">
-            <h2 id="write-comment-heading">Write a comment</h2>
-            <form>
-                <label for="comment">Your feedback</label>
-                <p id="comment-instructions" class="note">Give specific feedback: identify a section and suggest a concrete improvement.</p>
-                <textarea
-                    id="comment"
-                    name="comment"
-                    rows="6"
-                    aria-describedby="comment-instructions posting-status"
-                    placeholder="For example, add a measurable result to your most recent role."
-                ></textarea>
-                <button type="button" disabled aria-describedby="posting-status">Post Comment</button>
-                <p id="posting-status" class="note">Comment posting will be available once the backend is connected. Drafts are not saved.</p>
-            </form>
-        </section>
-    </main>
-</body>
-</html>
+    <p class="note">Feedback is not available yet.</p>
+</div>
+{% endblock %}
