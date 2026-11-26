@@ -18,7 +18,7 @@ class AuthTests(unittest.TestCase):
         token=re.search(r'name="csrf_token" value="([^"]+)"',page).group(1)
         return self.client.post(path,data={**data,'csrf_token':token})
     def test_registration_login_logout_and_session_isolation(self):
-        payload={'email':'alex@example.com','password':'a-long-password'}
+        payload={'email':'alex@example.com','password':'a-long-password','display_name':'Alex'}
         self.assertEqual(self.post('/register',payload).status_code,303)
         with self.app.app_context():
             user=database.get_user_by_email(payload['email'])

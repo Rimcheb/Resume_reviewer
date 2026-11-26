@@ -13,7 +13,7 @@ class SubmissionTests(unittest.TestCase):
         page=self.client.get('/resumes/new').get_data(as_text=True)
         self.token=re.search(r'name="csrf_token" value="([^"]+)"',page).group(1)
     def submit(self,**overrides):
-        data={'resume':'First line\n<script>example</script>','target_field':'Software','feedback_request':'Check clarity','csrf_token':self.token,'user_id':self.peer['id']}
+        data={'resume':'First line\n<script>example</script>','target_field':'Software engineering','feedback_request':'Check clarity','csrf_token':self.token,'user_id':self.peer['id']}
         data.update(overrides)
         return self.client.post('/resumes',data=data)
     def test_save_display_escape_session_owner_and_access(self):

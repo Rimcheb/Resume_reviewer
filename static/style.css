@@ -171,3 +171,14 @@ button:disabled {
 .message-success { color: var(--color-success); }
 
 .feedback-request { white-space: pre-wrap; overflow-wrap: anywhere; padding: var(--space-4); background: var(--color-surface); border-radius: var(--radius-md); }
+
+/* Ownership is a compact label rather than a heading or paragraph. */
+.badge {
+    display: inline-block;
+    padding: var(--space-1) var(--space-2);
+    border-radius: var(--radius-sm);
+    background: var(--color-accent);
+    color: var(--color-text);
+    font-size: var(--text-sm);
+    font-weight: bold;
+}
