@@ -23,7 +23,10 @@ class StorageTests(unittest.TestCase):
                 self.assertNotEqual(result.exit_code,0)
                 self.assertIn('Nothing was changed',result.output)
                 with app.extensions['database_engine'].begin() as connection:
-                    self.assertEqual(set(inspect(connection).get_table_names()),{'users','resumes','comments'})
+                    self.assertEqual(
+                        set(inspect(connection).get_table_names()),
+                        {'users', 'resumes', 'comments', 'comment_ratings'},
+                    )
                     self.assertEqual(connection.exec_driver_sql('SELECT count(*) FROM users').scalar(),1)
                     self.assertEqual(connection.exec_driver_sql('PRAGMA foreign_keys').scalar(),1)
                 with self.assertRaises(IntegrityError):
