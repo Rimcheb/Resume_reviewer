@@ -18,7 +18,13 @@
         <h3 id="resume-heading">Resume</h3>
         <!-- Jinja escapes user text; CSS preserves line breaks. -->
         <div class="resume-text">{{ resume.content }}</div>
-
+        {% if g.user.id == resume.user_id %}
+        <p><a href="{{ url_for('resumes.edit', resume_id=resume.id) }}">Edit resume</a></p>
+        <form method="post" action="{{ url_for('resumes.delete', resume_id=resume.id) }}">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <button type="submit">Delete resume and its comments</button>
+        </form>
+        {% endif %}
     </section>
 
     <section class="comments-section" aria-labelledby="comments-heading">
@@ -33,7 +39,13 @@
                     <div class="comment-text">{{ comment.content }}</div>
 
 
-
+                    {% if g.user.id == comment.author_id %}
+                    <p><a href="{{ url_for('comments.edit', comment_id=comment.id) }}">Edit comment</a></p>
+                    <form method="post" action="{{ url_for('comments.delete', comment_id=comment.id) }}">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        <button type="submit">Delete comment</button>
+                    </form>
+                    {% endif %}
                 </article>
             </li>
             {% else %}

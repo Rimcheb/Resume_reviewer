@@ -3,9 +3,9 @@ from pathlib import Path
 import click
 from flask import current_app, g
 from flask.cli import with_appcontext
-from sqlalchemy import create_engine, event, inspect, select, func
+from sqlalchemy import create_engine, event, inspect, select, func, delete
 from sqlalchemy.engine import URL
-from sqlalchemy.exc import IntegrityError, SQLAlchemyError
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 from sqlalchemy.pool import NullPool
 from backend.models import Base, Comment, Resume, User
@@ -92,8 +92,8 @@ def create_user(email, password_hash):
     """Save one user atomically; return None if the email already exists."""
     db = get_db()
     user = User(email=email, password_hash=password_hash)
-    db.add(user)
     try:
+        db.add(user)
         db.flush()  # Get the new ID before committing and expiring the ORM object.
         result = user_data(user)
         db.commit()
@@ -102,7 +102,7 @@ def create_user(email, password_hash):
         if get_user_by_email(email) is not None:
             return None
         raise
-    except SQLAlchemyError:
+    except Exception:
         db.rollback()
         raise
     return result
@@ -128,12 +128,12 @@ def create_resume(user_id, content, target_field, feedback_request):
     db = get_db()
     resume = Resume(user_id=user_id, content=content, target_field=target_field,
                     feedback_request=feedback_request)
-    db.add(resume)
     try:
+        db.add(resume)
         db.flush()
         result = resume_data(resume)
         db.commit()
-    except SQLAlchemyError:
+    except Exception:
         db.rollback()
         raise
     return result
@@ -188,12 +188,12 @@ def create_comment(resume_id, author_id, content):
     """Save a comment atomically; foreign keys require an existing resume and author."""
     db = get_db()
     comment = Comment(resume_id=resume_id, author_id=author_id, content=content)
-    db.add(comment)
     try:
+        db.add(comment)
         db.flush()
         result = comment_data(comment)
         db.commit()
-    except SQLAlchemyError:
+    except Exception:
         db.rollback()
         raise
     return result
@@ -212,3 +212,66 @@ def list_comments(resume_id):
 def get_comment_by_id(comment_id):
     """Find a comment by primary key and return a plain record."""
     return comment_data(get_db().get(Comment, comment_id))
+
+
+def update_resume(resume_id, content, target_field, feedback_request):
+    """Change only the editable fields, keeping ownership, creation time, and comments."""
+    db = get_db()
+    try:
+        resume = db.get(Resume, resume_id)
+        if resume is None:
+            return False
+        resume.content = content
+        resume.target_field = target_field
+        resume.feedback_request = feedback_request
+        db.commit()
+    except Exception:
+        db.rollback()
+        raise
+    return True
+
+
+def delete_resume(resume_id):
+    """Delete children before their parent in one transaction, preserving foreign keys."""
+    db = get_db()
+    try:
+        resume = db.get(Resume, resume_id)
+        if resume is None:
+            return False
+        db.execute(delete(Comment).where(Comment.resume_id == resume_id))
+        db.delete(resume)
+        db.commit()
+    except Exception:
+        db.rollback()
+        raise
+    return True
+
+
+def update_comment(comment_id, content):
+    """Change only comment text, retaining its author, resume, and creation time."""
+    db = get_db()
+    try:
+        comment = db.get(Comment, comment_id)
+        if comment is None:
+            return False
+        comment.content = content
+        db.commit()
+    except Exception:
+        db.rollback()
+        raise
+    return True
+
+
+def delete_comment(comment_id):
+    """Delete a single comment and roll back a failed write."""
+    db = get_db()
+    try:
+        comment = db.get(Comment, comment_id)
+        if comment is None:
+            return False
+        db.delete(comment)
+        db.commit()
+    except Exception:
+        db.rollback()
+        raise
+    return True

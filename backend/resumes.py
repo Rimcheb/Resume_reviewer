@@ -5,6 +5,7 @@ from flask import Blueprint, abort, flash, g, redirect, render_template, request
 from backend import database
 from backend.auth import login_required
 from backend.comments import COMMENT_LIMIT
+from backend.permissions import require_owner
 
 bp = Blueprint("resumes", __name__)
 
@@ -69,6 +70,44 @@ def detail(resume_id):
     return render_template("view_resume.html", resume=resume, comments=comments,
                            ratings={},
                            comment_limit=COMMENT_LIMIT)
+
+
+@bp.route("/resumes/<int:resume_id>/edit", methods=["GET", "POST"])
+@login_required
+def edit(resume_id):
+    """Let the owner change resume text and context while keeping comments."""
+    resume = database.get_resume_by_id(resume_id)
+    if resume is None:
+        abort(404)
+    require_owner(resume["user_id"])
+    if request.method == "POST":
+        content = request.form.get("resume", "")
+        target_field = request.form.get("target_field", "")
+        feedback_request = request.form.get("feedback_request", "")
+        error = submission_error(content, target_field, feedback_request)
+        if error is not None:
+            return submission_form(content, target_field, feedback_request, error, resume), 400
+        changed = database.update_resume(resume_id, content, target_field.strip(), feedback_request)
+        if not changed:
+            abort(404)
+        flash("Resume updated. Existing comments were kept.")
+        return redirect(url_for("resumes.detail", resume_id=resume_id), code=303)
+    return submission_form(resume["content"], resume["target_field"],
+                           resume["feedback_request"], resume=resume)
+
+
+@bp.post("/resumes/<int:resume_id>/delete")
+@login_required
+def delete(resume_id):
+    """Let the owner remove a resume and all its comments together."""
+    resume = database.get_resume_by_id(resume_id)
+    if resume is None:
+        abort(404)
+    require_owner(resume["user_id"])
+    if not database.delete_resume(resume_id):
+        abort(404)
+    flash("Resume and its comments deleted.")
+    return redirect(url_for("resumes.mine"), code=303)
 
 
 def resume_list(user_id=None):
