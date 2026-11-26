@@ -5,7 +5,7 @@ from sqlalchemy.orm import declarative_base
 
 Base = declarative_base()
 
-# The choices for Resume.target_field. 
+# The choices for Resume.target_field.
 FIELDS = (
     "Software engineering", "Data science", "Product management", "Design (UX/UI)",
     "Finance", "Consulting", "Marketing", "Research", "Other",
