@@ -1,6 +1,6 @@
 """Define the tables and constraints used for new databases and ORM queries."""
 
-from sqlalchemy import CheckConstraint, Column, ForeignKey, Integer, Text, func
+from sqlalchemy import CheckConstraint, Column, ForeignKey, Index, Integer, Text, func
 from sqlalchemy.orm import declarative_base
 
 Base = declarative_base()
@@ -28,6 +28,8 @@ class Resume(Base):
     feedback_request = Column(Text, nullable=False, server_default="")
     __table_args__ = (
         CheckConstraint(func.length(func.trim(content)) > 0),
+        Index("ix_resumes_created_at_id", "created_at", "id"),
+        Index("ix_resumes_user_created_at_id", "user_id", "created_at", "id"),
     )
 
 
