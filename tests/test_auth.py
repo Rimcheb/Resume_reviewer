@@ -25,7 +25,7 @@ class AuthTests(unittest.TestCase):
             self.assertNotEqual(user['password_hash'],payload['password'])
             self.assertTrue(check_password_hash(user['password_hash'],payload['password']))
         self.assertEqual(self.post('/register',payload).status_code,409)
-        self.assertEqual(self.post('/login?next=//evil.example',payload).location,'/account')
+        self.assertEqual(self.post('/login?next=//evil.example',payload).location,'/resumes')
         page=self.client.get('/account').get_data(as_text=True)
         self.assertNotIn(user['password_hash'],page)
         self.assertEqual(self.app.test_client().get('/account').status_code,302)

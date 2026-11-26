@@ -4,7 +4,7 @@
 {% block content %}
 <div class="resume-review">
     <header class="review-header">
-        <p><a class="back-link" href="{{ url_for('resumes.new') }}">Submit another résumé</a></p>
+        <p><a class="back-link" href="{{ back_url }}">{{ back_label }}</a></p>
         <h2>{{ resume.target_field or "Review Resume" }}</h2>
         <p>Submitted <time title="{{ resume.created_at }} UTC">{{ resume.created_at | readable_date }}</time></p>
         <p>{{ "Peer feedback received" if resume.has_peer_feedback else "Awaiting peer feedback" }}</p>

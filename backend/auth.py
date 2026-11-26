@@ -4,7 +4,7 @@ import unicodedata
 
 from email_validator import EmailNotValidError, validate_email
 from functools import wraps
-from urllib.parse import urlsplit
+from urllib.parse import urlsplit, unquote
 
 from flask import Blueprint, flash, g, redirect, render_template, request, session, url_for
 from werkzeug.security import check_password_hash, generate_password_hash
@@ -74,24 +74,29 @@ def login_required(view):
     @wraps(view)
     def protected_view(*args, **kwargs):
         if g.user is None:
-            return redirect(url_for("auth.login", next=request.path))
+            return redirect(url_for("auth.login", next=request.full_path.rstrip("?")))
         return view(*args, **kwargs)
     return protected_view
 
 
 def safe_next(value):
     """Accept only a local absolute path for the post-login redirect."""
+    decoded = value
+    for _ in range(3):
+        decoded = unquote(decoded)
+    if decoded.startswith("//") or "\\" in decoded or any(ord(c) < 32 or ord(c) == 127 for c in decoded):
+        return url_for("resumes.feed")
     if not value.startswith("/") or value.startswith("//") or "\\" in value:
-        return url_for("auth.account")
+        return url_for("resumes.feed")
     for character in value:
         if ord(character) < 32 or ord(character) == 127:
-            return url_for("auth.account")
+            return url_for("resumes.feed")
     try:
         parts = urlsplit(value)
     except ValueError:
-        return url_for("auth.account")
+        return url_for("resumes.feed")
     if parts.scheme or parts.netloc:
-        return url_for("auth.account")
+        return url_for("resumes.feed")
     return value
 
 
@@ -156,4 +161,4 @@ def index():
     """Send users to the appropriate starting page."""
     if g.user is None:
         return redirect(url_for("auth.login"))
-    return redirect(url_for("auth.account"))
+    return redirect(url_for("resumes.feed"))
