@@ -43,5 +43,6 @@ flask --app app run
 
 See .env.example for configuration names; it is a reference, not an automatically
 loaded configuration file. Production must supply a stable secret through the host
-environment and use secure cookies over HTTPS. See docs/DATABASE_SETUP.md for
-initialization safeguards. Account routes are /register, /login and /account.
+environment and use secure cookies over HTTPS. See the database guide for
+[initial setup](docs/DATABASE_SETUP.md) and [backup and restore](docs/DATABASE_SETUP.md#backup-and-restore).
+Account routes are /register, /login and /account.
