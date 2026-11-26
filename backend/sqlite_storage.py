@@ -172,3 +172,43 @@ def list_resumes(user_id=None, target_field="", limit=10, offset=0):
     for resume, has_peer_feedback in rows:
         records.append(resume_data(resume, has_peer_feedback))
     return records
+
+
+def comment_data(comment):
+    """Copy a comment without exposing account details or an ORM object."""
+    if comment is None:
+        return None
+    return {
+        "id": comment.id, "resume_id": comment.resume_id, "author_id": comment.author_id,
+        "content": comment.content, "created_at": comment.created_at,
+    }
+
+
+def create_comment(resume_id, author_id, content):
+    """Save a comment atomically; foreign keys require an existing resume and author."""
+    db = get_db()
+    comment = Comment(resume_id=resume_id, author_id=author_id, content=content)
+    db.add(comment)
+    try:
+        db.flush()
+        result = comment_data(comment)
+        db.commit()
+    except SQLAlchemyError:
+        db.rollback()
+        raise
+    return result
+
+
+def list_comments(resume_id):
+    """Read only this resume's comments in a stable discussion order."""
+    query = select(Comment).where(Comment.resume_id == resume_id)
+    query = query.order_by(Comment.created_at, Comment.id)
+    records = []
+    for comment in get_db().scalars(query):
+        records.append(comment_data(comment))
+    return records
+
+
+def get_comment_by_id(comment_id):
+    """Find a comment by primary key and return a plain record."""
+    return comment_data(get_db().get(Comment, comment_id))

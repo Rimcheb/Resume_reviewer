@@ -5,7 +5,7 @@ from datetime import datetime
 from flask import Flask, render_template
 from flask_wtf.csrf import CSRFError, CSRFProtect
 
-from backend import auth, database, resumes, sqlite_storage
+from backend import auth, comments, database, resumes, sqlite_storage
 
 
 def csrf_error(error):
@@ -59,5 +59,6 @@ def create_app(config=None):
     application.register_error_handler(CSRFError, csrf_error)
     application.register_blueprint(auth.bp)
     application.register_blueprint(resumes.bp)
+    application.register_blueprint(comments.bp)
     application.add_url_rule("/health", view_func=health)
     return application

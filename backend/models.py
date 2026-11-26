@@ -44,4 +44,6 @@ class Comment(Base):
     created_at = Column(Text, nullable=False, server_default=func.current_timestamp())
     __table_args__ = (
         CheckConstraint(func.length(func.trim(content)) > 0),
+        Index("ix_comments_resume_author", "resume_id", "author_id"),
+        Index("ix_comments_resume_created_id", "resume_id", "created_at", "id"),
     )
