@@ -16,8 +16,8 @@
         <div class="feedback-request">{{ resume.feedback_request }}</div>
         {% endif %}
         <h3 id="resume-heading">Resume</h3>
-        <!-- Jinja escapes user text; CSS preserves line breaks. -->
-        <div class="resume-text">{{ resume.content }}</div>
+        <!-- The filter escapes plain text and sanitizes formatted content. -->
+        <div class="resume-text{% if resume.content_format == 'html' %} rich-resume{% endif %}">{{ resume.content|resume_content(resume.content_format) }}</div>
         {% if g.user.id == resume.user_id %}
         <p><a href="{{ url_for('resumes.edit', resume_id=resume.id) }}">Edit resume</a></p>
         <form method="post" action="{{ url_for('resumes.delete', resume_id=resume.id) }}">

@@ -12,7 +12,7 @@ from sqlalchemy.schema import CreateColumn
 
 from backend.models import Base
 
-SCHEMA_VERSION = 3
+SCHEMA_VERSION = 4
 
 
 def backup_database(connection, backup_path):

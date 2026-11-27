@@ -6,6 +6,7 @@ from flask import Flask, render_template
 from flask_wtf.csrf import CSRFError, CSRFProtect
 
 from backend import auth, comments, database, resumes, ratings, sqlite_storage
+from backend.rich_text import render_content
 
 
 def csrf_error(error):
@@ -53,6 +54,7 @@ def create_app(config=None):
         SESSION_COOKIE_SAMESITE="Lax",
         SESSION_COOKIE_SECURE=os.getenv("COOKIE_SECURE", "true") != "false",
         MAX_CONTENT_LENGTH=256 * 1024,
+        RICH_TEXT_ENABLED=False,
     )
     if config is not None:
         application.config.update(config)
@@ -61,6 +63,7 @@ def create_app(config=None):
         raise RuntimeError("Set SECRET_KEY before starting the app.")
 
     application.add_template_filter(readable_date, "readable_date")
+    application.add_template_filter(render_content, "resume_content")
     database.init_app(application)
     CSRFProtect(application)
     application.register_error_handler(CSRFError, csrf_error)

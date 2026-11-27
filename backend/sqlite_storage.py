@@ -121,6 +121,7 @@ def resume_data(resume, has_peer_feedback=False):
         "id": resume.id,
         "user_id": resume.user_id,
         "content": resume.content,
+        "content_format": resume.content_format,
         "created_at": resume.created_at,
         "target_field": resume.target_field,
         "feedback_request": resume.feedback_request,
@@ -128,11 +129,11 @@ def resume_data(resume, has_peer_feedback=False):
     }
 
 
-def create_resume(user_id, content, target_field, feedback_request):
+def create_resume(user_id, content, target_field, feedback_request, content_format="plain"):
     """Save one resume and roll back if any database operation fails."""
     db = get_db()
     resume = Resume(user_id=user_id, content=content, target_field=target_field,
-                    feedback_request=feedback_request)
+                    feedback_request=feedback_request, content_format=content_format)
     try:
         db.add(resume)
         db.flush()
@@ -223,7 +224,7 @@ def get_comment_by_id(comment_id):
     return comment_data(get_db().get(Comment, comment_id))
 
 
-def update_resume(resume_id, content, target_field, feedback_request):
+def update_resume(resume_id, content, target_field, feedback_request, content_format="plain"):
     """Change only the editable fields, keeping ownership, creation time, and comments."""
     db = get_db()
     try:
@@ -231,6 +232,7 @@ def update_resume(resume_id, content, target_field, feedback_request):
         if resume is None:
             return False
         resume.content = content
+        resume.content_format = content_format
         resume.target_field = target_field
         resume.feedback_request = feedback_request
         db.commit()

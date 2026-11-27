@@ -24,10 +24,10 @@ def create_user(email, password_hash, display_name=""):
     return current_app.extensions["storage"].create_user(email, password_hash, display_name)
 
 
-def create_resume(user_id, content, target_field, feedback_request):
+def create_resume(user_id, content, target_field, feedback_request, content_format="plain"):
     """Save validated submission fields and return a plain resume record."""
     return current_app.extensions["storage"].create_resume(
-        user_id, content, target_field, feedback_request
+        user_id, content, target_field, feedback_request, content_format
     )
 
 
@@ -56,9 +56,9 @@ def get_comment_by_id(comment_id):
     return current_app.extensions["storage"].get_comment_by_id(comment_id)
 
 
-def update_resume(resume_id, content, target_field, feedback_request):
+def update_resume(resume_id, content, target_field, feedback_request, content_format="plain"):
     """Update validated fields after an ownership check; return False if missing."""
-    return current_app.extensions["storage"].update_resume(resume_id, content, target_field, feedback_request)
+    return current_app.extensions["storage"].update_resume(resume_id, content, target_field, feedback_request, content_format)
 
 
 def delete_resume(resume_id):
