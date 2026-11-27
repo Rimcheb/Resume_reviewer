@@ -7,13 +7,14 @@ from flask import current_app, Blueprint, abort, flash, g, redirect, render_temp
 from backend import database
 from backend.auth import login_required
 from backend.comments import COMMENT_LIMIT
+from backend.models import FIELDS
+from backend.fields import normalize_field
 from backend.permissions import require_owner
-from backend.rich_text import prepare_content
+from backend.rich_text import HTML_LIMIT, TEXT_LIMIT, prepare_content
 
 bp = Blueprint("resumes", __name__)
 
-RESUME_LIMIT = 20000
-FIELD_LIMIT = 100
+RESUME_LIMIT = TEXT_LIMIT
 FEEDBACK_LIMIT = 1000
 PAGE_SIZE = 10
 MAX_PAGE = 1000000
@@ -23,8 +24,8 @@ def submission_error(content, target_field, feedback_request, content_format="pl
     """Return the first input problem, or None when the submission is valid."""
     if content_format == "plain" and (not content.strip() or len(content) > RESUME_LIMIT):
         return f"Enter resume text with 1 to {RESUME_LIMIT:,} characters."
-    if not target_field.strip() or len(target_field) > FIELD_LIMIT:
-        return f"Enter a target role or field with 1 to {FIELD_LIMIT} characters."
+    if target_field not in FIELDS:
+        return "Choose a target field from the list."
     if len(feedback_request) > FEEDBACK_LIMIT:
         return f"Keep your feedback request within {FEEDBACK_LIMIT:,} characters."
     return None
@@ -33,9 +34,10 @@ def submission_error(content, target_field, feedback_request, content_format="pl
 def submission_form(content="", target_field="", feedback_request="", error=None, resume=None, content_format="plain"):
     """Keep form values and limits together for initial display and errors."""
     return render_template(
-        "submit_resume.html", content=content, target_field=target_field,
+        "submit_resume.html", content=content, target_field=normalize_field(target_field) or target_field,
         feedback_request=feedback_request, error=error, resume=resume, content_format=content_format,
-        resume_limit=RESUME_LIMIT, field_limit=FIELD_LIMIT, feedback_limit=FEEDBACK_LIMIT,
+        resume_limit=RESUME_LIMIT, fields=FIELDS, feedback_limit=FEEDBACK_LIMIT,
+        html_limit=HTML_LIMIT,
     )
 
 
@@ -51,7 +53,7 @@ def new():
 def create():
     """Save text under the signed-in user's ID and open its detail page."""
     content = request.form.get("resume", "")
-    target_field = request.form.get("target_field", "")
+    target_field = normalize_field(request.form.get("target_field", "")) or ""
     feedback_request = request.form.get("feedback_request", "")
     content_format = request.form.get("content_format", "plain")
     try:
@@ -90,7 +92,7 @@ def edit(resume_id):
     require_owner(resume["user_id"])
     if request.method == "POST":
         content = request.form.get("resume", "")
-        target_field = request.form.get("target_field", "")
+        target_field = normalize_field(request.form.get("target_field", "")) or ""
         feedback_request = request.form.get("feedback_request", "")
         content_format = request.form.get("content_format", "plain")
         try:
@@ -124,7 +126,7 @@ def delete(resume_id):
 
 
 def resume_list(user_id=None):
-    """Build either feed using a bounded page and an optional literal field filter."""
+    """Build either feed using a bounded page and an optional field filter from FIELDS."""
     try:
         page = int(request.args.get("page", "1"))
     except ValueError:
@@ -132,8 +134,11 @@ def resume_list(user_id=None):
     if page < 1 or page > MAX_PAGE:
         abort(400)
     target_field = request.args.get("field", "").strip()
-    if len(target_field) > FIELD_LIMIT:
-        abort(400)
+    if target_field:
+        target_field = normalize_field(target_field)
+        if target_field is None:
+            abort(400)
+    # Storage normalizes known legacy labels before filtering and pagination.
     # One extra row tells us whether a next page exists without counting all rows.
     records = database.list_resumes(user_id, target_field, PAGE_SIZE + 1, (page - 1) * PAGE_SIZE)
     if page > 1 and not records:
@@ -141,7 +146,7 @@ def resume_list(user_id=None):
     return render_template(
         "resume_list.html", resumes=records[:PAGE_SIZE], has_next=len(records) > PAGE_SIZE,
         page=page, target_field=target_field, is_mine=user_id is not None,
-        endpoint=request.endpoint, field_limit=FIELD_LIMIT,
+        endpoint=request.endpoint, fields=FIELDS,
     )
 
 
@@ -170,8 +175,12 @@ def list_return_context():
         query = parse_qs(parts.query)
         page = int(query.get("page", ["1"])[0])
         field = query.get("field", [""])[0]
-        if not 1 <= page <= MAX_PAGE or len(field) > FIELD_LIMIT:
+        if not 1 <= page <= MAX_PAGE:
             return fallback
+        if field:
+            field = normalize_field(field)
+            if field is None:
+                return fallback
     except ValueError:
         return fallback
     endpoint = "resumes.mine" if parts.path == "/my-resumes" else "resumes.feed"

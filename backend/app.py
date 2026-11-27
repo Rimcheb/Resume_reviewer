@@ -1,17 +1,26 @@
 """Create the web app and connect its small components."""
 
 import os
+from datetime import datetime
 from flask import Flask, render_template
 from flask_wtf.csrf import CSRFError, CSRFProtect
 
-from backend.rich_text import render_content
-
 from backend import auth, comments, database, resumes, ratings, sqlite_storage
+from backend.rich_text import render_content
 
 
 def csrf_error(error):
     """Ask the user to reload an expired or invalid form."""
     return render_template("error.html", message="Please reload the form and try again."), 400
+
+
+def readable_date(value):
+    """Format SQLite/ISO dates for readers while leaving unknown values intact."""
+    try:
+        parsed = datetime.fromisoformat(str(value).replace("Z", "+00:00"))
+    except (ValueError, TypeError):
+        return value
+    return f"{parsed.strftime('%b')} {parsed.day}, {parsed.year}"
 
 
 def health():
@@ -53,7 +62,8 @@ def create_app(config=None):
     if not application.config["SECRET_KEY"]:
         raise RuntimeError("Set SECRET_KEY before starting the app.")
 
-    application.jinja_env.filters["resume_content"] = render_content
+    application.add_template_filter(readable_date, "readable_date")
+    application.add_template_filter(render_content, "resume_content")
     database.init_app(application)
     CSRFProtect(application)
     application.register_error_handler(CSRFError, csrf_error)

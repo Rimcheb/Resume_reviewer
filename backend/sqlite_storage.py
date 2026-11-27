@@ -4,15 +4,14 @@ import click
 from flask import current_app, g
 from flask.cli import with_appcontext
 from sqlalchemy import create_engine, event, inspect, select, func, delete
+from sqlalchemy.dialects.sqlite import insert
 from sqlalchemy.engine import URL
 from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 from sqlalchemy.orm import Session
 from sqlalchemy.pool import NullPool
-from backend.models import Base, Comment, Resume, User
-from sqlalchemy.dialects.sqlite import insert
-from backend.models import CommentRating
-from backend.sqlite_upgrade import SCHEMA_VERSION, upgrade_db_command
-from backend.sqlite_upgrade import backup_db_command
+from backend.fields import normalize_field
+from backend.models import Base, Comment, CommentRating, Resume, User
+from backend.sqlite_upgrade import SCHEMA_VERSION, backup_db_command, upgrade_db_command
 
 
 def configure_connection(connection, connection_record):
@@ -21,6 +20,7 @@ def configure_connection(connection, connection_record):
     connection.execute("PRAGMA foreign_keys = ON")
     # Use the same lowercase rules as other storage implementations.
     connection.create_function("lowercase", 1, str.lower)
+    connection.create_function("canonical_field", 1, normalize_field, deterministic=True)
 
 
 def begin_transaction(connection):
@@ -97,8 +97,8 @@ def create_user(email, password_hash, display_name=""):
     """Save one user atomically; return None if the email already exists."""
     db = get_db()
     user = User(email=email, password_hash=password_hash, display_name=display_name)
-    db.add(user)
     try:
+        db.add(user)
         db.flush()  # Get the new ID before committing and expiring the ORM object.
         result = user_data(user)
         db.commit()
@@ -107,7 +107,7 @@ def create_user(email, password_hash, display_name=""):
         if get_user_by_email(email) is not None:
             return None
         raise
-    except SQLAlchemyError:
+    except Exception:
         db.rollback()
         raise
     return result
@@ -134,12 +134,12 @@ def create_resume(user_id, content, target_field, feedback_request, content_form
     db = get_db()
     resume = Resume(user_id=user_id, content=content, target_field=target_field,
                     feedback_request=feedback_request, content_format=content_format)
-    db.add(resume)
     try:
+        db.add(resume)
         db.flush()
         result = resume_data(resume)
         db.commit()
-    except SQLAlchemyError:
+    except Exception:
         db.rollback()
         raise
     return result
@@ -169,9 +169,10 @@ def list_resumes(user_id=None, target_field="", limit=10, offset=0):
     if user_id is not None:
         query = query.where(Resume.user_id == user_id)
     if target_field:
-        field = func.lowercase(Resume.target_field)
-        # instr finds literal text, including % and _, and returns 0 if absent.
-        query = query.where(func.instr(field, target_field.lower()) > 0)
+        category = normalize_field(target_field)
+        if category is None:
+            return []
+        query = query.where(func.canonical_field(Resume.target_field) == category)
     query = query.order_by(Resume.created_at.desc(), Resume.id.desc())
     rows = get_db().execute(query.limit(limit).offset(offset)).all()
     records = []
@@ -187,6 +188,7 @@ def comment_data(comment):
     return {
         "id": comment.id, "resume_id": comment.resume_id, "author_id": comment.author_id,
         "content": comment.content, "created_at": comment.created_at,
+        "pushes_exaggeration": comment.pushes_exaggeration,
     }
 
 
@@ -194,12 +196,12 @@ def create_comment(resume_id, author_id, content):
     """Save a comment atomically; foreign keys require an existing resume and author."""
     db = get_db()
     comment = Comment(resume_id=resume_id, author_id=author_id, content=content)
-    db.add(comment)
     try:
+        db.add(comment)
         db.flush()
         result = comment_data(comment)
         db.commit()
-    except SQLAlchemyError:
+    except Exception:
         db.rollback()
         raise
     return result
@@ -225,16 +227,16 @@ def get_comment_by_id(comment_id):
 def update_resume(resume_id, content, target_field, feedback_request, content_format="plain"):
     """Change only the editable fields, keeping ownership, creation time, and comments."""
     db = get_db()
-    resume = db.get(Resume, resume_id)
-    if resume is None:
-        return False
-    resume.content = content
-    resume.content_format = content_format
-    resume.target_field = target_field
-    resume.feedback_request = feedback_request
     try:
+        resume = db.get(Resume, resume_id)
+        if resume is None:
+            return False
+        resume.content = content
+        resume.content_format = content_format
+        resume.target_field = target_field
+        resume.feedback_request = feedback_request
         db.commit()
-    except SQLAlchemyError:
+    except Exception:
         db.rollback()
         raise
     return True
@@ -243,16 +245,16 @@ def update_resume(resume_id, content, target_field, feedback_request, content_fo
 def delete_resume(resume_id):
     """Delete children before their parent in one transaction, preserving foreign keys."""
     db = get_db()
-    resume = db.get(Resume, resume_id)
-    if resume is None:
-        return False
     try:
+        resume = db.get(Resume, resume_id)
+        if resume is None:
+            return False
         comment_ids = select(Comment.id).where(Comment.resume_id == resume_id)
         db.execute(delete(CommentRating).where(CommentRating.comment_id.in_(comment_ids)))
         db.execute(delete(Comment).where(Comment.resume_id == resume_id))
         db.delete(resume)
         db.commit()
-    except SQLAlchemyError:
+    except Exception:
         db.rollback()
         raise
     return True
@@ -261,13 +263,28 @@ def delete_resume(resume_id):
 def update_comment(comment_id, content):
     """Change only comment text, retaining its author, resume, and creation time."""
     db = get_db()
-    comment = db.get(Comment, comment_id)
-    if comment is None:
-        return False
-    comment.content = content
     try:
+        comment = db.get(Comment, comment_id)
+        if comment is None:
+            return False
+        comment.content = content
         db.commit()
-    except SQLAlchemyError:
+    except Exception:
+        db.rollback()
+        raise
+    return True
+
+
+def flag_exaggeration(comment_id, flagged):
+    """Set or clear the owner's 'pushes me to exaggerate' flag on one comment."""
+    db = get_db()
+    try:
+        comment = db.get(Comment, comment_id)
+        if comment is None:
+            return False
+        comment.pushes_exaggeration = flagged
+        db.commit()
+    except Exception:
         db.rollback()
         raise
     return True
@@ -276,14 +293,14 @@ def update_comment(comment_id, content):
 def delete_comment(comment_id):
     """Delete a single comment and roll back a failed write."""
     db = get_db()
-    comment = db.get(Comment, comment_id)
-    if comment is None:
-        return False
     try:
+        comment = db.get(Comment, comment_id)
+        if comment is None:
+            return False
         db.execute(delete(CommentRating).where(CommentRating.comment_id == comment_id))
         db.delete(comment)
         db.commit()
-    except SQLAlchemyError:
+    except Exception:
         db.rollback()
         raise
     return True
@@ -301,7 +318,7 @@ def save_rating(comment_id, rater_id, helpful):
     try:
         db.execute(statement)
         db.commit()
-    except SQLAlchemyError:
+    except Exception:
         db.rollback()
         raise
 
@@ -314,7 +331,7 @@ def delete_rating(comment_id, rater_id):
             CommentRating.comment_id == comment_id, CommentRating.rater_id == rater_id
         ))
         db.commit()
-    except SQLAlchemyError:
+    except Exception:
         db.rollback()
         raise
 
@@ -366,13 +383,13 @@ def is_ready():
 def update_display_name(user_id, display_name):
     """Save an account name atomically."""
     db = get_db()
-    user = db.get(User, user_id)
-    if user is None:
-        return False
-    user.display_name = display_name
     try:
+        user = db.get(User, user_id)
+        if user is None:
+            return False
+        user.display_name = display_name
         db.commit()
-    except SQLAlchemyError:
+    except Exception:
         db.rollback()
         raise
     return True
