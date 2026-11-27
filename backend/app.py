@@ -1,6 +1,7 @@
 """Create the web app and connect its small components."""
 
 import os
+from datetime import datetime
 from flask import Flask, render_template, request
 from flask_wtf.csrf import CSRFError, CSRFProtect
 
@@ -32,6 +33,15 @@ def too_large(error):
     else:
         message = "That request is too large."
     return render_template("error.html", message=message), 413
+
+
+def readable_date(value):
+    """Format SQLite/ISO dates for readers while leaving unknown values intact."""
+    try:
+        parsed = datetime.fromisoformat(str(value).replace("Z", "+00:00"))
+    except (ValueError, TypeError):
+        return value
+    return f"{parsed.strftime('%b')} {parsed.day}, {parsed.year}"
 
 
 def health():
@@ -72,6 +82,7 @@ def create_app(config=None):
     if not application.config["SECRET_KEY"]:
         raise RuntimeError("Set SECRET_KEY before starting the app.")
 
+    application.add_template_filter(readable_date, "readable_date")
     database.init_app(application)
     application.before_request(allow_uploads)
     CSRFProtect(application)

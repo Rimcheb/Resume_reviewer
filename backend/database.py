@@ -19,9 +19,9 @@ def get_user_by_id(user_id):
     return current_app.extensions["storage"].get_user_by_id(user_id)
 
 
-def create_user(email, password_hash):
+def create_user(email, password_hash, display_name=""):
     """Save a normalized email and password hash, or return None if duplicate."""
-    return current_app.extensions["storage"].create_user(email, password_hash)
+    return current_app.extensions["storage"].create_user(email, password_hash, display_name)
 
 
 def create_resume(user_id, content, target_field, feedback_request):
@@ -71,6 +71,11 @@ def update_comment(comment_id, content):
     return current_app.extensions["storage"].update_comment(comment_id, content)
 
 
+def flag_exaggeration(comment_id, flagged):
+    """Set (1) or clear (0) the owner's exaggeration flag after permission checks."""
+    return current_app.extensions["storage"].flag_exaggeration(comment_id, flagged)
+
+
 def delete_comment(comment_id):
     """After an authorship check, delete a comment; return False if missing."""
     return current_app.extensions["storage"].delete_comment(comment_id)
@@ -99,3 +104,8 @@ def get_reputation(user_id):
 def is_ready():
     """Return whether the selected storage is available and has the current schema."""
     return current_app.extensions["storage"].is_ready()
+
+
+def update_display_name(user_id, display_name):
+    """Update the authenticated account’s public name."""
+    return current_app.extensions["storage"].update_display_name(user_id, display_name)
