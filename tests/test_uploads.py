@@ -59,7 +59,7 @@ class UploadTests(unittest.TestCase):
     def post(self, path='/resumes/import', data=None, filename='resume.docx', payload=None):
         page = self.client.get('/resumes/new').get_data(as_text=True)
         token = re.search(r'name="csrf_token" value="([^"]+)"', page).group(1)
-        values = {'csrf_token': token, 'target_field': 'Software', 'feedback_request': 'Review projects', 'resume': 'Existing draft'}
+        values = {'csrf_token': token, 'target_field': 'Software engineering', 'feedback_request': 'Review projects', 'resume': 'Existing draft'}
         values.update(data or {})
         if payload is not None:
             values['resume_file'] = (BytesIO(payload), filename)
@@ -113,7 +113,8 @@ class UploadTests(unittest.TestCase):
         self.assertEqual(result.status_code, 400)
         self.assertEqual(self.post(filename='large.pdf', payload=b'x'*(3*1024*1024)).status_code, 413)
         document = Document()
-        document.add_paragraph('x'*20001)
+        document.add_paragraph('x'*20000)
+        document.add_paragraph('This last line must not be silently dropped.')
         output = BytesIO()
         document.save(output)
         result = self.post(payload=output.getvalue())

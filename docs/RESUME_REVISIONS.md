@@ -33,7 +33,7 @@ revision argument when integrated.
 
 ## Validation
 
-Run `python -m unittest discover -s tests -v`: 22 tests pass. Seven new tests cover
+Run `python -m unittest discover -s tests -v`. The revision tests cover
 stale-page feedback, immutable content/context, no-op edits, revision access and
 cross-résumé rejection, validation retries, comment edits, deletion, transaction
 rollback, and a backed-up repeatable v4 migration. Local browser screenshots show

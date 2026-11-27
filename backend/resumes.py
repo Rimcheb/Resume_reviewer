@@ -10,13 +10,12 @@ from backend.comments import COMMENT_LIMIT
 from backend.models import FIELDS
 from backend.fields import normalize_field
 from backend.permissions import require_owner
-from backend.rich_text import prepare_content
+from backend.rich_text import HTML_LIMIT, TEXT_LIMIT, prepare_content
 from backend.uploads import extract_upload, UploadError
 
 bp = Blueprint("resumes", __name__)
 
-RESUME_LIMIT = 20000
-FIELD_LIMIT = 100
+RESUME_LIMIT = TEXT_LIMIT
 FEEDBACK_LIMIT = 1000
 PAGE_SIZE = 10
 MAX_PAGE = 1000000
@@ -39,6 +38,7 @@ def submission_form(content="", target_field="", feedback_request="", error=None
         "submit_resume.html", content=content, target_field=normalize_field(target_field) or target_field,
         feedback_request=feedback_request, error=error, resume=resume, content_format=content_format,
         resume_limit=RESUME_LIMIT, fields=FIELDS, feedback_limit=FEEDBACK_LIMIT,
+        html_limit=HTML_LIMIT,
     )
 
 
@@ -53,8 +53,9 @@ def new():
 @login_required
 def create():
     """Save text under the signed-in user's ID and open its detail page."""
-    if request.files.get("resume_file") and request.files["resume_file"].filename:
-        return import_file()
+    upload = request.files.get("resume_file")
+    if upload is not None and upload.filename:
+        return review_upload(upload)
     content = request.form.get("resume", "")
     target_field = normalize_field(request.form.get("target_field", "")) or ""
     feedback_request = request.form.get("feedback_request", "")
@@ -95,8 +96,9 @@ def edit(resume_id):
         abort(404)
     require_owner(resume["user_id"])
     if request.method == "POST":
-        if request.files.get("resume_file") and request.files["resume_file"].filename:
-            return import_file(resume_id)
+        upload = request.files.get("resume_file")
+        if upload is not None and upload.filename:
+            return review_upload(upload, resume)
         content = request.form.get("resume", "")
         target_field = normalize_field(request.form.get("target_field", "")) or ""
         feedback_request = request.form.get("feedback_request", "")
@@ -144,11 +146,9 @@ def resume_list(user_id=None):
         target_field = normalize_field(target_field)
         if target_field is None:
             abort(400)
-    # ponytail: storage still matches by substring, so résumés saved before the
-    # dropdown existed (free text like "Software Engineering intern") still show up.
-    # One extra row tells us whether a next page exists without counting all rows.
-    # Soft match: on the community feed, resumes in the member's review fields come first.
+    # Use preferences only when browsing the unfiltered community feed.
     preferred = g.user["review_fields"] if user_id is None and not target_field else []
+    # One extra row tells us whether a next page exists without counting all rows.
     records = database.list_resumes(user_id, target_field, PAGE_SIZE + 1, (page - 1) * PAGE_SIZE,
                                     preferred)
     if page > 1 and not records:
@@ -185,8 +185,12 @@ def list_return_context():
         query = parse_qs(parts.query)
         page = int(query.get("page", ["1"])[0])
         field = query.get("field", [""])[0]
-        if not 1 <= page <= MAX_PAGE or len(field) > FIELD_LIMIT:
+        if not 1 <= page <= MAX_PAGE:
             return fallback
+        if field:
+            field = normalize_field(field)
+            if field is None:
+                return fallback
     except ValueError:
         return fallback
     endpoint = "resumes.mine" if parts.path == "/my-resumes" else "resumes.feed"
@@ -213,23 +217,30 @@ def revision(resume_id, revision_id):
         abort(404)
     return render_template("resume_revision.html", resume=resume, revision=record)
 
+
 UNREADABLE_FILE = "Upload a readable .pdf or .docx file, or paste your resume as text."
+
 
 @bp.post("/resumes/import")
 @bp.post("/resumes/<int:resume_id>/import")
 @login_required
 def import_file(resume_id=None):
     """Extract into an editable form without saving a résumé or retaining the file."""
-    resume = database.get_resume_by_id(resume_id) if resume_id is not None else None
+    resume = None
     if resume_id is not None:
+        resume = database.get_resume_by_id(resume_id)
         if resume is None:
             abort(404)
         require_owner(resume["user_id"])
+    return review_upload(request.files.get("resume_file"), resume)
+
+
+def review_upload(upload, resume=None):
+    """Fill the editable form with imported plain text, or keep the draft on error."""
     pasted = request.form.get("resume", "")
     original_format = request.form.get("content_format", "plain")
     target = request.form.get("target_field", "")
     feedback = request.form.get("feedback_request", "")
-    upload = request.files.get("resume_file")
     if upload is None or not upload.filename:
         return submission_form(pasted, target, feedback, "Choose a PDF or DOCX file to import.", resume, original_format), 400
     try:
