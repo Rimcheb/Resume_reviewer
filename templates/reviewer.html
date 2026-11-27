@@ -2,6 +2,7 @@
 {% block title %}{{ display_name }} feedback | Resume Reviewer{% endblock %}
 {% block content %}
 <h2>{{ display_name }} feedback</h2>
+<p class="note">Reviewer #{{ user_id }} · Display names are chosen by users and are not verified or unique.</p>
 <h3>Review fields</h3>
 {% if review_fields %}<ul>{% for field in review_fields %}<li>{{ field }}</li>{% endfor %}</ul>
 {% else %}<p>No review fields shared yet.</p>{% endif %}
@@ -10,11 +11,11 @@
 {% else %}<p>No expertise bio shared yet.</p>{% endif %}
 <p>Experience and review fields are self-reported.</p>
 {% if g.user.id == user_id %}<p><a href="{{ url_for('auth.account', _anchor='expertise') }}">Edit your expertise</a></p>{% endif %}
-{% if reputation.total %}
+{% if reputation.total >= min_reviews %}
 <p>{{ reputation.helpful }} of {{ reputation.total }} rated comments marked helpful
     ({{ reputation.percentage }}%).</p>
 {% else %}
-<p>Not rated yet.</p>
+<p>The score appears after {{ min_reviews }} rated reviews ({{ reputation.total }} so far).</p>
 {% endif %}
 <p>Only the resume owner can rate another member's feedback.
     The percentage is helpful ratings divided by all ratings, rounded to a whole number.

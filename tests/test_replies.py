@@ -42,6 +42,16 @@ class ReplyTests(unittest.TestCase):
         page = self.client.get(response.location).get_data(as_text=True)
         self.assertIn('class="comment-reply"', page)
         self.assertIn('Thanks for the advice', page)
+        for comment in (self.parent, child):
+            article = re.search(rf'<article id="comment-{comment["id"]}">(.*?)</article>', page, re.S)
+            self.assertIsNotNone(article)
+            link = re.search(r'<a href="([^"]+)">View reviewed version</a>', article.group(1))
+            self.assertIsNotNone(link)
+            self.assertEqual(link.group(1), f'/resumes/{self.resume["id"]}/revisions/{self.revision}')
+            history = self.client.get(link.group(1))
+            self.assertEqual(history.status_code, 200)
+            self.assertIn('Resume text', history.get_data(as_text=True))
+            self.assertNotIn('Updated text', history.get_data(as_text=True))
         form = self.client.get(f'/comments/{self.parent["id"]}/reply').get_data(as_text=True)
         self.assertIn('Original advice', form)
         self.assertIn(f'name="parent_id" value="{self.parent["id"]}"', form)
@@ -116,6 +126,10 @@ class ReplyTests(unittest.TestCase):
                 self.assertIsNone(comment['parent_id'])
                 self.assertFalse(comment['is_deleted'])
             self.assertFalse(upgrade_db(Path(self.temp.name) / 'unused.sqlite'))
+        with closing(sqlite3.connect(self.path)) as conn:
+            references = [(r[3], r[2], r[4]) for r in conn.execute('PRAGMA foreign_key_list(comments)')]
+            self.assertIn(('parent_id', 'comments', 'id'), references)
+            self.assertIn(('revision_id', 'resume_revisions', 'id'), references)
 
 
 del Fixture

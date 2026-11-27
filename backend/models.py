@@ -5,7 +5,7 @@ from sqlalchemy.orm import declarative_base
 
 Base = declarative_base()
 
-# The choices for Resume.target_field. 
+# The choices for Resume.target_field.
 FIELDS = (
     "Software engineering", "Data science", "Product management", "Design (UX/UI)",
     "Finance", "Consulting", "Marketing", "Research", "Other",
@@ -68,6 +68,8 @@ class Comment(Base):
     parent_id = Column(Integer, ForeignKey("comments.id"), nullable=True)
     is_deleted = Column(Integer, nullable=False, server_default="0")
     content = Column(Text, nullable=False)
+    # Set by the resume owner when advice pushes them to exaggerate or invent results.
+    pushes_exaggeration = Column(Integer, nullable=False, server_default="0")
     created_at = Column(Text, nullable=False, server_default=func.current_timestamp())
     __table_args__ = (
         CheckConstraint(func.length(func.trim(content)) > 0),

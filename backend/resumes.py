@@ -10,12 +10,11 @@ from backend.comments import COMMENT_LIMIT
 from backend.models import FIELDS
 from backend.fields import normalize_field
 from backend.permissions import require_owner
-from backend.rich_text import prepare_content
+from backend.rich_text import HTML_LIMIT, TEXT_LIMIT, prepare_content
 
 bp = Blueprint("resumes", __name__)
 
-RESUME_LIMIT = 20000
-FIELD_LIMIT = 100
+RESUME_LIMIT = TEXT_LIMIT
 FEEDBACK_LIMIT = 1000
 PAGE_SIZE = 10
 MAX_PAGE = 1000000
@@ -38,6 +37,7 @@ def submission_form(content="", target_field="", feedback_request="", error=None
         "submit_resume.html", content=content, target_field=normalize_field(target_field) or target_field,
         feedback_request=feedback_request, error=error, resume=resume, content_format=content_format,
         resume_limit=RESUME_LIMIT, fields=FIELDS, feedback_limit=FEEDBACK_LIMIT,
+        html_limit=HTML_LIMIT,
     )
 
 
@@ -139,11 +139,9 @@ def resume_list(user_id=None):
         target_field = normalize_field(target_field)
         if target_field is None:
             abort(400)
-    # ponytail: storage still matches by substring, so résumés saved before the
-    # dropdown existed (free text like "Software Engineering intern") still show up.
-    # One extra row tells us whether a next page exists without counting all rows.
-    # Soft match: on the community feed, resumes in the member's review fields come first.
+    # Use preferences only when browsing the unfiltered community feed.
     preferred = g.user["review_fields"] if user_id is None and not target_field else []
+    # One extra row tells us whether a next page exists without counting all rows.
     records = database.list_resumes(user_id, target_field, PAGE_SIZE + 1, (page - 1) * PAGE_SIZE,
                                     preferred)
     if page > 1 and not records:
@@ -180,8 +178,12 @@ def list_return_context():
         query = parse_qs(parts.query)
         page = int(query.get("page", ["1"])[0])
         field = query.get("field", [""])[0]
-        if not 1 <= page <= MAX_PAGE or len(field) > FIELD_LIMIT:
+        if not 1 <= page <= MAX_PAGE:
             return fallback
+        if field:
+            field = normalize_field(field)
+            if field is None:
+                return fallback
     except ValueError:
         return fallback
     endpoint = "resumes.mine" if parts.path == "/my-resumes" else "resumes.feed"

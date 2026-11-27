@@ -5,7 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{% block title %}Resume Reviewer{% endblock %}</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
-    <link rel="stylesheet" href="{{ url_for('static', filename='auth.css') }}">
 </head>
 <body>
     <main class="container{% block page_class %}{% endblock %}">
@@ -22,7 +21,7 @@
         </nav>
         {% endif %}
         {% for message in get_flashed_messages() %}
-        <p role="status">{{ message }}</p>
+        <p class="message-success" role="status">{{ message }}</p>
         {% endfor %}
         {% block content %}{% endblock %}
     </main>

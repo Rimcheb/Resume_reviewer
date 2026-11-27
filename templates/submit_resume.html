@@ -9,7 +9,7 @@
 {% endif %}
 <p>All authenticated members can read your resume and feedback request.
     Remove contact details and anything you do not want to share before posting.</p>
-{% if error %}<p role="alert">{{ error }}</p>{% endif %}
+{% if error %}<p class="message-error" role="alert">{{ error }}</p>{% endif %}
 <form method="post" action="{{ url_for('resumes.edit', resume_id=resume.id) if resume else url_for('resumes.create') }}">
     <input type="hidden" name="content_format" value="{{ content_format }}">
     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
@@ -30,9 +30,9 @@
     <p class="note">Up to {{ feedback_limit }} characters.</p>
 
     <label for="resume">Your Resume</label>
-    <textarea id="resume" name="resume" rows="12" maxlength="{{ resume_limit }}"
+    <textarea id="resume" name="resume" rows="12" maxlength="{{ html_limit if content_format == 'html' else resume_limit }}"
               placeholder="Paste your resume here..." required>{{ content }}</textarea>
-    <p class="note">Up to {{ resume_limit }} characters. Text only.</p>
+    <p class="note">Up to {{ resume_limit }} text characters.</p>
     <button type="submit">{{ "Save changes" if resume else "Submit Resume" }}</button>
 </form>
 {% if resume %}<p><a href="{{ url_for('resumes.detail', resume_id=resume.id) }}">Back to resume</a></p>{% endif %}

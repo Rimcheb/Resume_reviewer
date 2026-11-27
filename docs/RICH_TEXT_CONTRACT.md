@@ -39,7 +39,7 @@ newer writes after the backup require separate recovery.
 
 ## Validation
 
-Run `python -m unittest discover -s tests -v` (15 tests). Tests exercise the enabled
+Run `python -m unittest discover -s tests -v`. Tests exercise the enabled
 contract explicitly and verify that HTML submission is disabled by default.
 Frontend follow-up: real Quill paste/save/edit/reload tests, mobile/keyboard toolbar
 checks, and confirmation that sizes/lists survive sanitization. #106 remains open.

@@ -42,11 +42,11 @@ def register():
         except EmailNotValidError:
             error = "Enter a valid email address."
 
-        if not 8 <= len(password) <= 128 or not password.strip():
+        if error is None and (not 8 <= len(password) <= 128 or not password.strip()):
             error = "Use a password with 8 to 128 characters."
 
         display_name = request.form.get("display_name", "").strip()
-        if display_name and not valid_display_name(display_name):
+        if error is None and not valid_display_name(display_name):
             error = "Use a display name with 1 to 80 characters, without @ or control characters."
 
         if error is None:
