@@ -1,3 +1,6 @@
+-- Historical reference from the initial schema PR.
+-- backend/models.py is the source of truth; use flask --app app init-db.
+-- Do not execute this file to initialize or upgrade the application database.
 -- SQLite: enable foreign-key checks on every connection, before a transaction.
 PRAGMA foreign_keys = ON;
 

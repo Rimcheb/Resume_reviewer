@@ -5,6 +5,12 @@ from sqlalchemy.orm import declarative_base
 
 Base = declarative_base()
 
+# The choices for Resume.target_field.
+FIELDS = (
+    "Software engineering", "Data science", "Product management", "Design (UX/UI)",
+    "Finance", "Consulting", "Marketing", "Research", "Other",
+)
+
 
 class User(Base):
     """An account identified by its email address."""
@@ -12,6 +18,7 @@ class User(Base):
     __tablename__ = "users"
     id = Column(Integer, primary_key=True)
     email = Column(Text, nullable=False, unique=True)
+    display_name = Column(Text, nullable=False, server_default="")
     password_hash = Column(Text, nullable=False)
     __table_args__ = (CheckConstraint(func.length(func.trim(email)) > 0),)
 
@@ -41,6 +48,8 @@ class Comment(Base):
     resume_id = Column(Integer, ForeignKey("resumes.id"), nullable=False)
     author_id = Column(Integer, ForeignKey("users.id"), nullable=False)
     content = Column(Text, nullable=False)
+    # Set by the resume owner when advice pushes them to exaggerate or invent results.
+    pushes_exaggeration = Column(Integer, nullable=False, server_default="0")
     created_at = Column(Text, nullable=False, server_default=func.current_timestamp())
     __table_args__ = (
         CheckConstraint(func.length(func.trim(content)) > 0),
