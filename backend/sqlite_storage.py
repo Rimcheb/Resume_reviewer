@@ -3,7 +3,7 @@ from pathlib import Path
 import click
 from flask import current_app, g
 from flask.cli import with_appcontext
-from sqlalchemy import create_engine, event, inspect, select, func, delete
+from sqlalchemy import case, create_engine, event, inspect, select, func, delete
 from sqlalchemy.dialects.sqlite import insert
 from sqlalchemy.engine import URL
 from sqlalchemy.exc import IntegrityError, SQLAlchemyError
@@ -79,7 +79,9 @@ def user_data(user):
     if user is None:
         return None
     return {"id": user.id, "email": user.email, "password_hash": user.password_hash,
-            "display_name": user.display_name or "Reviewer"}
+            "display_name": user.display_name or "Reviewer",
+            "review_fields": [field for field in user.review_fields.split("\n") if field],
+            "expertise_bio": user.expertise_bio}
 
 
 def get_user_by_email(email):
@@ -93,10 +95,11 @@ def get_user_by_id(user_id):
     return user_data(get_db().get(User, user_id))
 
 
-def create_user(email, password_hash, display_name=""):
+def create_user(email, password_hash, display_name="", review_fields=()):
     """Save one user atomically; return None if the email already exists."""
     db = get_db()
-    user = User(email=email, password_hash=password_hash, display_name=display_name)
+    user = User(email=email, password_hash=password_hash, display_name=display_name,
+                review_fields="\n".join(review_fields))
     try:
         db.add(user)
         db.flush()  # Get the new ID before committing and expiring the ORM object.
@@ -165,7 +168,7 @@ def get_resume_by_id(resume_id):
     return resume_data(resume, has_peer_feedback)
 
 
-def list_resumes(user_id=None, target_field="", limit=10, offset=0):
+def list_resumes(user_id=None, target_field="", limit=10, offset=0, preferred_fields=()):
     """Filter, order, and limit rows in SQL before copying the returned records."""
     query = resume_query()
     if user_id is not None:
@@ -175,7 +178,10 @@ def list_resumes(user_id=None, target_field="", limit=10, offset=0):
         if category is None:
             return []
         query = query.where(func.canonical_field(Resume.target_field) == category)
-    query = query.order_by(Resume.created_at.desc(), Resume.id.desc())
+    order = [Resume.created_at.desc(), Resume.id.desc()]
+    if preferred_fields:
+        order.insert(0, case((func.canonical_field(Resume.target_field).in_(preferred_fields), 0), else_=1))
+    query = query.order_by(*order)
     rows = get_db().execute(query.limit(limit).offset(offset)).all()
     records = []
     for resume, has_peer_feedback in rows:
@@ -463,3 +469,33 @@ def get_revision(resume_id, revision_id):
         ResumeRevision.id == revision_id, ResumeRevision.resume_id == resume_id,
     )
     return revision_data(get_db().scalar(query))
+
+
+def update_review_fields(user_id, review_fields):
+    """Replace the fields this member says they can review."""
+    db = get_db()
+    try:
+        user = db.get(User, user_id)
+        if user is None:
+            return False
+        user.review_fields = "\n".join(review_fields)
+        db.commit()
+    except Exception:
+        db.rollback()
+        raise
+    return True
+
+
+def update_expertise_bio(user_id, bio):
+    """Save the authenticated member's plain-text expertise bio atomically."""
+    db = get_db()
+    try:
+        user = db.get(User, user_id)
+        if user is None:
+            return False
+        user.expertise_bio = bio
+        db.commit()
+    except Exception:
+        db.rollback()
+        raise
+    return True

@@ -68,10 +68,11 @@ def exaggeration(comment_id):
 @bp.get("/reviewers/<int:user_id>")
 @login_required
 def reviewer(user_id):
-    """Show only the member ID and derived helpfulness, never their email or hash."""
+    """Show opted-in expertise, a public name and ratings without private account data."""
     reviewer_user = database.get_user_by_id(user_id)
     if reviewer_user is None:
         abort(404)
     return render_template("reviewer.html", user_id=user_id, display_name=reviewer_user["display_name"],
+                           review_fields=reviewer_user["review_fields"], expertise_bio=reviewer_user["expertise_bio"],
                            min_reviews=MIN_REVIEWS,
                            reputation=database.get_reputation(user_id))

@@ -2,14 +2,16 @@
 {% block title %}{{ "My Resumes" if is_mine else "Browse Resumes" }} | Resume Reviewer{% endblock %}
 {% block content %}
 <h2>{{ "My Resumes" if is_mine else "Browse Resumes" }}</h2>
+{% if preferred %}
+<p>Résumés in your review fields appear first. <a href="{{ url_for('auth.account') }}">Change review fields</a></p>
+{% else %}
 <p>{{ "Manage your résumés and check feedback. Newest submissions appear first." if is_mine else "Newest submissions appear first. Choose a request in a field you can help with." }}</p>
+{% endif %}
 <form method="get" action="{{ url_for(endpoint) }}">
     <label for="field">Filter by target field</label>
     <select id="field" name="field">
         <option value="">All fields</option>
-        {% for field in fields %}
-        <option{% if field == target_field %} selected{% endif %}>{{ field }}</option>
-        {% endfor %}
+        {% for field in fields %}<option{% if field == target_field %} selected{% endif %}>{{ field }}</option>{% endfor %}
     </select>
     <button type="submit">Filter</button>
     <a href="{{ url_for(endpoint) }}">Clear filter</a>

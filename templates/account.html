@@ -10,8 +10,21 @@
     <p>Visible beside your comments and on your reviewer profile. Avoid private contact information.</p>
     <button type="submit">Save display name</button>
 </form>
+<form id="expertise" method="post" action="{{ url_for('auth.expertise_bio') }}">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <label for="expertise_bio">Expertise bio (optional)</label>
+    <textarea id="expertise_bio" name="expertise_bio" maxlength="500" rows="4" aria-describedby="bio-help">{{ bio_value if bio_value is defined else g.user.expertise_bio }}</textarea>
+    <p id="bio-help">Up to 500 characters. Visible to signed-in members on your reviewer profile. Describe relevant experience and avoid private contact information.</p>
+    <button type="submit">Save expertise bio</button>
+</form>
+<p><a href="{{ url_for('ratings.reviewer', user_id=g.user.id) }}">View your reviewer profile</a></p>
 <p>You are logged in as {{ g.user["email"] }}.</p>
 <p><a href="{{ url_for('resumes.new') }}">Submit a resume</a></p>
+<form method="post" action="{{ url_for('auth.review_fields') }}">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    {% include "field_checkboxes.html" %}
+    <button type="submit">Save fields</button>
+</form>
 <form method="post" action="{{ url_for('auth.logout') }}">
     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
     <button type="submit">Log out</button>

@@ -139,15 +139,17 @@ def resume_list(user_id=None):
         target_field = normalize_field(target_field)
         if target_field is None:
             abort(400)
-    # Storage normalizes known legacy labels before filtering and pagination.
+    # Use preferences only when browsing the unfiltered community feed.
+    preferred = g.user["review_fields"] if user_id is None and not target_field else []
     # One extra row tells us whether a next page exists without counting all rows.
-    records = database.list_resumes(user_id, target_field, PAGE_SIZE + 1, (page - 1) * PAGE_SIZE)
+    records = database.list_resumes(user_id, target_field, PAGE_SIZE + 1, (page - 1) * PAGE_SIZE,
+                                    preferred)
     if page > 1 and not records:
         abort(404)
     return render_template(
         "resume_list.html", resumes=records[:PAGE_SIZE], has_next=len(records) > PAGE_SIZE,
         page=page, target_field=target_field, is_mine=user_id is not None,
-        endpoint=request.endpoint, fields=FIELDS,
+        endpoint=request.endpoint, fields=FIELDS, preferred=preferred,
     )
 
 

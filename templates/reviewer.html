@@ -3,6 +3,14 @@
 {% block content %}
 <h2>{{ display_name }} feedback</h2>
 <p class="note">Reviewer #{{ user_id }} · Display names are chosen by users and are not verified or unique.</p>
+<h3>Review fields</h3>
+{% if review_fields %}<ul>{% for field in review_fields %}<li>{{ field }}</li>{% endfor %}</ul>
+{% else %}<p>No review fields shared yet.</p>{% endif %}
+<h3>About this reviewer</h3>
+{% if expertise_bio %}<div style="white-space: pre-wrap; overflow-wrap: anywhere;">{{ expertise_bio }}</div>
+{% else %}<p>No expertise bio shared yet.</p>{% endif %}
+<p>Experience and review fields are self-reported.</p>
+{% if g.user.id == user_id %}<p><a href="{{ url_for('auth.account', _anchor='expertise') }}">Edit your expertise</a></p>{% endif %}
 {% if reputation.total >= min_reviews %}
 <p>{{ reputation.helpful }} of {{ reputation.total }} rated comments marked helpful
     ({{ reputation.percentage }}%).</p>
