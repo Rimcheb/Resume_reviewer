@@ -110,6 +110,12 @@ button:disabled {
 .rich-resume .ql-size-large { font-size: 1.5em; }
 .rich-resume .ql-size-huge { font-size: 2.5em; }
 
+.resume-review .comment-reply {
+    margin-inline-start: 1rem;
+    padding-inline-start: .75rem;
+    border-inline-start: 3px solid var(--color-border);
+}
+
 .resume-review .comment-text {
     background: var(--color-surface);
 }

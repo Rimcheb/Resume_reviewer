@@ -24,16 +24,25 @@ def create(resume_id):
     resume = database.get_resume_by_id(resume_id)
     if resume is None:
         abort(404)
+    raw_parent = request.form.get("parent_id", "")
+    try:
+        parent_id = int(raw_parent) if raw_parent else None
+    except ValueError:
+        abort(400)
+    parent = database.get_comment_by_id(parent_id) if parent_id is not None else None
+    if parent_id is not None and (parent is None or parent["resume_id"] != resume_id or parent["is_deleted"] or parent["parent_id"] is not None):
+        abort(400)
     content = request.form.get("comment", "")
     error = comment_error(content)
     if error is not None:
         return render_template("comment_form.html", resume=resume, content=content,
                                error=error, comment_limit=COMMENT_LIMIT, comment=None,
-                               revision_id=request.form.get("revision_id", "")), 400
+                               revision_id=parent["revision_id"] if parent else request.form.get("revision_id", ""),
+                               parent_id=parent_id, parent=parent), 400
     raw_revision = request.form.get("revision_id", "")
     try:
-        revision_id = int(raw_revision) if raw_revision else None
-        comment = database.create_comment(resume_id, g.user["id"], content, revision_id)
+        revision_id = parent["revision_id"] if parent else (int(raw_revision) if raw_revision else None)
+        comment = database.create_comment(resume_id, g.user["id"], content, revision_id, parent_id)
     except ValueError:
         abort(400)
     return redirect(url_for("resumes.detail", resume_id=resume_id,
@@ -45,7 +54,7 @@ def create(resume_id):
 def edit(comment_id):
     """Let only the comment author edit the text, keeping its author and resume."""
     comment = database.get_comment_by_id(comment_id)
-    if comment is None:
+    if comment is None or comment["is_deleted"]:
         abort(404)
     require_owner(comment["author_id"])
     resume = database.get_resume_by_id(comment["resume_id"])
@@ -73,10 +82,25 @@ def edit(comment_id):
 def delete(comment_id):
     """Let only the comment author delete it; the resume itself remains."""
     comment = database.get_comment_by_id(comment_id)
-    if comment is None:
+    if comment is None or comment["is_deleted"]:
         abort(404)
     require_owner(comment["author_id"])
     if not database.delete_comment(comment_id):
         abort(404)
     flash("Comment deleted.")
     return redirect(url_for("resumes.detail", resume_id=comment["resume_id"]), code=303)
+
+
+@bp.get("/comments/<int:comment_id>/reply")
+@login_required
+def reply(comment_id):
+    """Open a direct reply while applying the résumé’s current access policy."""
+    parent = database.get_comment_by_id(comment_id)
+    if parent is None or parent["is_deleted"] or parent["parent_id"] is not None:
+        abort(404)
+    resume = database.get_resume_by_id(parent["resume_id"])
+    if resume is None:
+        abort(404)
+    return render_template("comment_form.html", resume=resume, comment=None,
+        content="", error=None, comment_limit=COMMENT_LIMIT, parent=parent,
+        parent_id=parent["id"], revision_id=parent["revision_id"])

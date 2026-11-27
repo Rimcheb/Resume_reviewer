@@ -15,7 +15,7 @@ MIN_REVIEWS = 3
 def ratable_comment(comment_id):
     """Only a resume owner may rate a comment written by someone else."""
     comment = database.get_comment_by_id(comment_id)
-    if comment is None:
+    if comment is None or comment["is_deleted"]:
         abort(404)
     resume = database.get_resume_by_id(comment["resume_id"])
     if resume is None:

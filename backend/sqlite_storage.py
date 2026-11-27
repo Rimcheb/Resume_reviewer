@@ -151,6 +151,7 @@ def resume_query():
     peer_feedback = select(Comment.id).where(
         Comment.resume_id == Resume.id,
         Comment.author_id != Resume.user_id,
+        Comment.is_deleted == 0,
     ).exists()
     return select(Resume, peer_feedback)
 
@@ -191,19 +192,27 @@ def comment_data(comment):
         "content": comment.content, "created_at": comment.created_at,
         "pushes_exaggeration": comment.pushes_exaggeration,
         "revision_id": comment.revision_id,
+        "parent_id": comment.parent_id,
+        "is_deleted": bool(comment.is_deleted),
     }
 
 
-def create_comment(resume_id, author_id, content, revision_id=None):
-    """Save feedback with the version the reviewer saw, if known."""
+def create_comment(resume_id, author_id, content, revision_id=None, parent_id=None):
+    """Save feedback, inheriting the original comment's reviewed version for a reply."""
     db = get_db()
     try:
+        if parent_id is not None:
+            parent = db.get(Comment, parent_id)
+            if (parent is None or parent.resume_id != resume_id
+                    or parent.is_deleted or parent.parent_id is not None):
+                raise ValueError("Choose an available original comment on this résumé.")
+            revision_id = parent.revision_id
         if revision_id is not None:
             revision = db.get(ResumeRevision, revision_id)
             if revision is None or revision.resume_id != resume_id:
                 raise ValueError("Revision does not belong to this résumé.")
         comment = Comment(resume_id=resume_id, author_id=author_id, content=content,
-                          revision_id=revision_id)
+                          revision_id=revision_id, parent_id=parent_id)
         db.add(comment)
         db.flush()
         result = comment_data(comment)
@@ -215,7 +224,7 @@ def create_comment(resume_id, author_id, content, revision_id=None):
 
 
 def list_comments(resume_id):
-    """Read only this resume's comments in a stable discussion order."""
+    """List original comments in order, each followed by its replies in order."""
     query = select(Comment, User.display_name).join(User, User.id == Comment.author_id).where(Comment.resume_id == resume_id)
     query = query.order_by(Comment.created_at, Comment.id)
     records = []
@@ -223,7 +232,16 @@ def list_comments(resume_id):
         record = comment_data(comment)
         record["author_display_name"] = display_name or "Reviewer"
         records.append(record)
-    return records
+    children = {}
+    for record in records:
+        if record["parent_id"] is not None:
+            children.setdefault(record["parent_id"], []).append(record)
+    grouped = []
+    for record in records:
+        if record["parent_id"] is None:
+            grouped.append(record)
+            grouped.extend(children.get(record["id"], []))
+    return grouped
 
 
 def get_comment_by_id(comment_id):
@@ -275,7 +293,7 @@ def update_comment(comment_id, content):
     db = get_db()
     try:
         comment = db.get(Comment, comment_id)
-        if comment is None:
+        if comment is None or comment.is_deleted:
             return False
         comment.content = content
         db.commit()
@@ -290,7 +308,7 @@ def flag_exaggeration(comment_id, flagged):
     db = get_db()
     try:
         comment = db.get(Comment, comment_id)
-        if comment is None:
+        if comment is None or comment.is_deleted:
             return False
         comment.pushes_exaggeration = flagged
         db.commit()
@@ -308,7 +326,13 @@ def delete_comment(comment_id):
         if comment is None:
             return False
         db.execute(delete(CommentRating).where(CommentRating.comment_id == comment_id))
-        db.delete(comment)
+        has_replies = db.scalar(select(Comment.id).where(Comment.parent_id == comment_id).limit(1))
+        if has_replies is not None:
+            comment.content = "Comment deleted."
+            comment.pushes_exaggeration = 0
+            comment.is_deleted = 1
+        else:
+            db.delete(comment)
         db.commit()
     except Exception:
         db.rollback()
@@ -351,6 +375,7 @@ def eligible_ratings():
     return select(CommentRating).join(Comment).join(Resume).where(
         CommentRating.rater_id == Resume.user_id,
         Comment.author_id != Resume.user_id,
+        Comment.is_deleted == 0,
     )
 
 

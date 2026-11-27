@@ -10,9 +10,9 @@ from sqlalchemy import inspect
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.schema import CreateColumn
 
-from backend.models import Base, Comment
+from backend.models import Base
 
-SCHEMA_VERSION = 5
+SCHEMA_VERSION = 6
 
 
 def backup_database(connection, backup_path):
@@ -83,9 +83,10 @@ def upgrade_db(backup_path):
         # its model definition. A new NOT NULL column therefore needs a server_default.
         for column in columns:
             definition = str(CreateColumn(column).compile(dialect=connection.dialect))
-            if column is Comment.__table__.c.revision_id:
-                # SQLite needs the reference inline when adding a column.
-                definition += " REFERENCES resume_revisions(id)"
+            # SQLite needs each added column's foreign key in the ALTER statement.
+            for foreign_key in column.foreign_keys:
+                target = foreign_key.column
+                definition += f" REFERENCES {target.table.name}({target.name})"
             connection.exec_driver_sql(f"ALTER TABLE {column.table.name} ADD COLUMN {definition}")
         for index in indexes:
             index.create(connection)

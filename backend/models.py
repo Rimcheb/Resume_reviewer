@@ -62,6 +62,8 @@ class Comment(Base):
     resume_id = Column(Integer, ForeignKey("resumes.id"), nullable=False)
     author_id = Column(Integer, ForeignKey("users.id"), nullable=False)
     revision_id = Column(Integer, ForeignKey("resume_revisions.id"), nullable=True)
+    parent_id = Column(Integer, ForeignKey("comments.id"), nullable=True)
+    is_deleted = Column(Integer, nullable=False, server_default="0")
     content = Column(Text, nullable=False)
     # Set by the resume owner when advice pushes them to exaggerate or invent results.
     pushes_exaggeration = Column(Integer, nullable=False, server_default="0")
