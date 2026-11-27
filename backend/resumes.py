@@ -79,7 +79,8 @@ def detail(resume_id):
     comments = database.list_comments(resume_id)
     return render_template("view_resume.html", resume=resume, comments=comments,
                            ratings=database.list_ratings(resume_id),
-                           comment_limit=COMMENT_LIMIT, **list_return_context())
+                           comment_limit=COMMENT_LIMIT, current_revision=database.get_current_revision(resume_id),
+                           **list_return_context())
 
 
 @bp.route("/resumes/<int:resume_id>/edit", methods=["GET", "POST"])
@@ -193,3 +194,16 @@ def submitted_content(content, content_format):
     if content_format == "html" and not current_app.config["RICH_TEXT_ENABLED"]:
         raise ValueError("Formatted editing is not available yet.")
     return prepare_content(content, content_format)
+
+
+@bp.get("/resumes/<int:resume_id>/revisions/<int:revision_id>")
+@login_required
+def revision(resume_id, revision_id):
+    """Apply current résumé access rules before showing immutable history."""
+    resume = database.get_resume_by_id(resume_id)
+    if resume is None:
+        abort(404)
+    record = database.get_revision(resume_id, revision_id)
+    if record is None:
+        abort(404)
+    return render_template("resume_revision.html", resume=resume, revision=record)

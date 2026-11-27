@@ -10,9 +10,9 @@ from sqlalchemy import inspect
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.schema import CreateColumn
 
-from backend.models import Base
+from backend.models import Base, Comment
 
-SCHEMA_VERSION = 4
+SCHEMA_VERSION = 5
 
 
 def backup_database(connection, backup_path):
@@ -77,15 +77,25 @@ def upgrade_db(backup_path):
             return False
 
         backup_database(connection, backup_path)
+        Base.metadata.create_all(connection)  # new tables, with their indexes
 
         # create_all cannot add columns to existing tables, so ALTER adds each one from
         # its model definition. A new NOT NULL column therefore needs a server_default.
         for column in columns:
-            definition = CreateColumn(column).compile(dialect=connection.dialect)
+            definition = str(CreateColumn(column).compile(dialect=connection.dialect))
+            if column is Comment.__table__.c.revision_id:
+                # SQLite needs the reference inline when adding a column.
+                definition += " REFERENCES resume_revisions(id)"
             connection.exec_driver_sql(f"ALTER TABLE {column.table.name} ADD COLUMN {definition}")
-        Base.metadata.create_all(connection)  # new tables, with their indexes
         for index in indexes:
             index.create(connection)
+        # Only today's text is known. Older comments keep a NULL revision_id.
+        connection.exec_driver_sql("""
+            INSERT INTO resume_revisions (resume_id, content, content_format, target_field, feedback_request)
+            SELECT r.id, r.content, r.content_format, r.target_field, r.feedback_request
+            FROM resumes AS r
+            WHERE NOT EXISTS (SELECT 1 FROM resume_revisions AS v WHERE v.resume_id = r.id)
+        """)
         connection.exec_driver_sql(f"PRAGMA user_version = {SCHEMA_VERSION}")
     return True
 

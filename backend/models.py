@@ -41,6 +41,19 @@ class Resume(Base):
     )
 
 
+class ResumeRevision(Base):
+    """An immutable snapshot created when résumé content or context changes."""
+    __tablename__ = "resume_revisions"
+    id = Column(Integer, primary_key=True)
+    resume_id = Column(Integer, ForeignKey("resumes.id"), nullable=False)
+    content = Column(Text, nullable=False)
+    content_format = Column(Text, nullable=False)
+    target_field = Column(Text, nullable=False)
+    feedback_request = Column(Text, nullable=False)
+    created_at = Column(Text, nullable=False, server_default=func.current_timestamp())
+    __table_args__ = (Index("ix_revisions_resume_id", "resume_id", "id"),)
+
+
 class Comment(Base):
     """Feedback or a follow-up written by a user on a resume."""
 
@@ -48,6 +61,7 @@ class Comment(Base):
     id = Column(Integer, primary_key=True)
     resume_id = Column(Integer, ForeignKey("resumes.id"), nullable=False)
     author_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    revision_id = Column(Integer, ForeignKey("resume_revisions.id"), nullable=True)
     content = Column(Text, nullable=False)
     # Set by the resume owner when advice pushes them to exaggerate or invent results.
     pushes_exaggeration = Column(Integer, nullable=False, server_default="0")
