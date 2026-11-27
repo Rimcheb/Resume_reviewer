@@ -36,7 +36,7 @@ class NavigationTests(unittest.TestCase):
         destination = '/my-resumes?field=Software&page=1'
         page = self.client.get(f'/resumes/{self.resume["id"]}?return_to={quote(destination, safe="")}').get_data(as_text=True)
         self.assertIn('Back to My Résumés', page)
-        self.assertIn('/my-resumes?page=1&amp;field=Software', page)
+        self.assertIn('/my-resumes?page=1&amp;field=Software+engineering', page)
         for destination in ('//evil.example/resumes', '/account', '/resumes?page=-1', '/resumes?page=no'):
             page = self.client.get(f'/resumes/{self.resume["id"]}?return_to={quote(destination, safe="")}').get_data(as_text=True)
             self.assertIn('href="/resumes">Back to Browse', page)
@@ -55,3 +55,23 @@ class NavigationTests(unittest.TestCase):
         self.assertEqual(self.client.get('/my-resumes').status_code, 302)
 
 del Fixture
+
+
+class DropdownNavigationTests(unittest.TestCase):
+    setUp = NavigationTests.setUp
+    login = NavigationTests.login
+    def test_dropdown_and_back_keep_canonical_filter_and_page(self):
+        with self.app.app_context():
+            for number in range(11):
+                database.create_resume(self.owner['id'], f'Legacy resume {number}', 'SWE', '')
+        listing = self.client.get('/my-resumes?field=SWE&page=2')
+        self.assertEqual(listing.status_code, 200)
+        html = listing.get_data(as_text=True)
+        self.assertIn('<select id="field" name="field">', html)
+        self.assertIn('<option selected>Software engineering</option>', html)
+        import html as html_module
+        link = re.search(r'href="([^"]*return_to=[^"]*)"', html).group(1)
+        detail = self.client.get(html_module.unescape(link)).get_data(as_text=True)
+        self.assertIn('/my-resumes?page=2&amp;field=Software+engineering', detail)
+        bad = self.client.get(f'/resumes/{self.resume["id"]}', query_string={'return_to': '/resumes?field=unknown'})
+        self.assertIn('href="/resumes">Back to Browse', bad.get_data(as_text=True))

@@ -6,7 +6,7 @@
     <header class="review-header">
         <p><a class="back-link" href="{{ back_url }}">{{ back_label }}</a></p>
         <h2>{{ resume.target_field or "Review Resume" }}</h2>
-        <p>Submitted {{ resume.created_at }} (UTC)</p>
+        <p>Submitted <time title="{{ resume.created_at }} UTC">{{ resume.created_at | readable_date }}</time></p>
         <p>{{ "Peer feedback received" if resume.has_peer_feedback else "Awaiting peer feedback" }}</p>
     </header>
 
@@ -16,7 +16,7 @@
         <div class="feedback-request">{{ resume.feedback_request }}</div>
         {% endif %}
         <h3 id="resume-heading">Resume</h3>
-        <!-- Jinja escapes user text; CSS preserves line breaks. -->
+        <!-- The filter escapes plain text and sanitizes formatted content. -->
         <div class="resume-text{% if resume.content_format == 'html' %} rich-resume{% endif %}">{{ resume.content|resume_content(resume.content_format) }}</div>
         {% if g.user.id == resume.user_id %}
         <p><a href="{{ url_for('resumes.edit', resume_id=resume.id) }}">Edit resume</a></p>
@@ -29,19 +29,27 @@
 
     <section class="comments-section" aria-labelledby="comments-heading">
         <h3 id="comments-heading">Discussion</h3>
-        <p>Each new comment links to the résumé version that was reviewed.</p>
+        <p>When the reviewed version is known, you can open it from the comment.</p>
         <ul class="comment-list">
             {% for comment in comments %}
             <li>
                 <article id="comment-{{ comment.id }}">
-                    <p><a href="{{ url_for('ratings.reviewer', user_id=comment.author_id) }}">{{ comment.author_display_name }}</a>{% if comment.author_id == resume.user_id %} (resume owner){% endif %}
-                        — {{ comment.created_at }} (UTC)</p>
+                    <p><a href="{{ url_for('ratings.reviewer', user_id=comment.author_id) }}">{{ comment.author_display_name }}</a> <span class="note">(reviewer #{{ comment.author_id }})</span>{% if comment.author_id == resume.user_id %} (resume owner){% endif %}
+                        — <time title="{{ comment.created_at }} UTC">{{ comment.created_at | readable_date }}</time></p>
                     {% if comment.revision_id %}
-                    <p>{% if current_revision and comment.revision_id != current_revision.id %}Résumé edited since this comment. {% endif %}<a href="{{ url_for('resumes.revision', resume_id=resume.id, revision_id=comment.revision_id) }}">View reviewed version</a></p>
-                    {% else %}<p>Reviewed version unknown.</p>{% endif %}
+                    <p>
+                        {% if current_revision and comment.revision_id != current_revision.id %}This feedback refers to an earlier version. {% endif %}
+                        <a href="{{ url_for('resumes.revision', resume_id=resume.id, revision_id=comment.revision_id) }}">View reviewed version</a>
+                    </p>
+                    {% else %}
+                    <p>Reviewed version unknown.</p>
+                    {% endif %}
                     <div class="comment-text">{{ comment.content }}</div>
                     {% if comment.id in ratings %}
                     <p>Owner rated this {{ "helpful" if ratings[comment.id] else "not helpful" }}.</p>
+                    {% endif %}
+                    {% if comment.pushes_exaggeration %}
+                    <p class="flag">⚠ The owner says this advice pushes them to exaggerate.</p>
                     {% endif %}
                     {% if g.user.id == resume.user_id and comment.author_id != resume.user_id %}
                     <form method="post" action="{{ url_for('ratings.save', comment_id=comment.id) }}">
@@ -49,6 +57,14 @@
                         <p class="note">Was this feedback useful to you?</p>
                         <button type="submit" name="helpful" value="1">Helpful</button>
                         <button type="submit" name="helpful" value="0">Not helpful</button>
+                    </form>
+                    <form method="post" action="{{ url_for('ratings.exaggeration', comment_id=comment.id) }}">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        {% if comment.pushes_exaggeration %}
+                        <button type="submit" name="flagged" value="0">Remove exaggeration flag</button>
+                        {% else %}
+                        <button type="submit" name="flagged" value="1">This pushes me to exaggerate</button>
+                        {% endif %}
                     </form>
                     {% if comment.id in ratings %}
                     <form method="post" action="{{ url_for('ratings.delete', comment_id=comment.id) }}">
@@ -76,13 +92,16 @@
         <h3 id="write-comment-heading">Add feedback or a follow-up</h3>
         <form method="post" action="{{ url_for('comments.create', resume_id=resume.id) }}">
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-            {% if current_revision %}<input type="hidden" name="revision_id" value="{{ current_revision.id }}">{% endif %}
+            {% if current_revision %}
+            <input type="hidden" name="revision_id" value="{{ current_revision.id }}">
+            {% endif %}
             <label for="comment">Your comment</label>
             <p id="comment-instructions" class="note">For useful feedback, identify the passage or problem,
-                explain why it matters, and suggest a concrete improvement. Questions and owner follow-ups are welcome.</p>
+                explain why it matters, and suggest a concrete improvement. Suggest clearer wording for what
+                actually happened; don't invent numbers or results. Questions and owner follow-ups are welcome.</p>
             <textarea id="comment" name="comment" rows="6" maxlength="{{ comment_limit }}" required
                 aria-describedby="comment-instructions comment-limit"
-                placeholder="For example, add a measurable result to your most recent role."></textarea>
+                placeholder="For example, describe what you actually did and who it helped."></textarea>
             <p id="comment-limit" class="note">Up to {{ comment_limit }} characters. All authenticated members can read comments.</p>
             <button type="submit">Post comment</button>
         </form>

@@ -13,7 +13,6 @@ body {
     max-width: 700px;
     margin: 60px auto;
     padding: var(--space-6);
-    overflow-wrap: anywhere;
 }
 
 /* Shared form controls also support future resume and comment forms. */
@@ -26,7 +25,7 @@ form {
     border-radius: var(--radius-md);
 }
 
-textarea {
+input:not([type="hidden"]), textarea {
     min-width: 0;
     padding: var(--space-4);
     color: var(--color-text);
@@ -38,7 +37,7 @@ textarea {
 }
 
 /* Keep keyboard focus visible against the input background. */
-textarea:focus {
+input:not([type="hidden"]):focus-visible, textarea:focus-visible {
     border-color: var(--color-focus-border);
     outline: 2px solid var(--color-focus-border);
     outline-offset: 2px;
@@ -63,17 +62,6 @@ button:disabled {
 .note {
     font-size: var(--text-sm);
 }
-
-/* Reduce outer spacing on narrow screens to leave room for the form. */
-@media (max-width: 600px) {
-    .container {
-        margin: 20px auto;
-        padding: var(--space-4);
-    }
-}
-
-.container.review-page { max-width: 1100px; }
-.resume-review .feedback-request { white-space: pre-wrap; }
 
 /* Review page sections reuse the shared container, form, and design variables. */
 .resume-review {
@@ -100,7 +88,7 @@ button:disabled {
 }
 
 /* Preserve pasted line breaks and wrap long text within narrow screens. */
-.resume-review .resume-text,
+.resume-text,
 .resume-review .comment-text {
     white-space: pre-wrap;
     overflow-wrap: anywhere;
@@ -110,12 +98,17 @@ button:disabled {
 }
 
 /* Give plain resume text the spacing and surface of a document. */
-.resume-review .resume-text {
+.resume-text {
     padding: var(--space-6);
     background: var(--color-background);
     line-height: 1.7;
     box-shadow: 0 2px 6px var(--color-border);
 }
+
+.rich-resume { white-space: normal; }
+.rich-resume .ql-size-small { font-size: .75em; }
+.rich-resume .ql-size-large { font-size: 1.5em; }
+.rich-resume .ql-size-huge { font-size: 2.5em; }
 
 .resume-review .comment-text {
     background: var(--color-surface);
@@ -155,7 +148,7 @@ button:disabled {
         grid-column: 1 / -1;
     }
 
-    .resume-review .review-header h2 {
+    .resume-review .review-header h1 {
         margin-bottom: 0;
     }
 
@@ -169,4 +162,56 @@ button:disabled {
         grid-column: 2;
         margin-top: 0;
     }
+}
+
+@media (max-width: 600px) {
+    .container {
+        margin: 20px auto;
+        padding: var(--space-4);
+    }
+}
+
+.message-error, .message-success { padding: var(--space-3); border: 1px solid currentColor; border-radius: var(--radius-sm); }
+.message-error { color: var(--color-error); }
+.message-success { color: var(--color-success); }
+
+.feedback-request { white-space: pre-wrap; overflow-wrap: anywhere; padding: var(--space-4); background: var(--color-surface); border-radius: var(--radius-md); }
+
+/* Ownership is a compact label rather than a heading or paragraph. */
+.badge {
+    display: inline-block;
+    padding: var(--space-1) var(--space-2);
+    border-radius: var(--radius-sm);
+    background: var(--color-accent);
+    color: var(--color-text);
+    font-size: var(--text-sm);
+    font-weight: bold;
+}
+
+/* Shared navigation: filled current page and separate keyboard focus outline. */
+.main-nav {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-2);
+    align-items: center;
+    margin-block: var(--space-4);
+}
+.main-nav .nav-action, .main-nav button {
+    display: inline-block;
+    padding: var(--space-3) var(--space-4);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-sm);
+    text-decoration: none;
+    font: inherit;
+}
+.main-nav .nav-action[aria-current="page"] {
+    font-weight: bold;
+    background: var(--color-primary);
+    color: var(--color-background);
+}
+.main-nav form { margin: 0; padding: 0; background: none; }
+.main-nav button { margin: 0; width: auto; }
+.main-nav a:focus-visible, .main-nav button:focus-visible {
+    outline: 3px solid var(--color-text);
+    outline-offset: var(--space-1);
 }
