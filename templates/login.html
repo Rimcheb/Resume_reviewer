@@ -2,7 +2,7 @@
 {% block title %}Log in | Resume Reviewer{% endblock %}
 {% block content %}
 <h2>Log in</h2>
-{% if error %}<p role="alert">{{ error }}</p>{% endif %}
+{% if error %}<p class="message-error" role="alert">{{ error }}</p>{% endif %}
 <form method="post" action="{{ url_for('auth.login', next=next_url) }}">
     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
     <label for="email">Email</label>
