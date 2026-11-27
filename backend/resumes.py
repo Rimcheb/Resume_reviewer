@@ -11,6 +11,7 @@ from backend.models import FIELDS
 from backend.fields import normalize_field
 from backend.permissions import require_owner
 from backend.rich_text import HTML_LIMIT, TEXT_LIMIT, prepare_content
+from backend.uploads import extract_upload, UploadError
 
 bp = Blueprint("resumes", __name__)
 
@@ -52,6 +53,9 @@ def new():
 @login_required
 def create():
     """Save text under the signed-in user's ID and open its detail page."""
+    upload = request.files.get("resume_file")
+    if upload is not None and upload.filename:
+        return review_upload(upload)
     content = request.form.get("resume", "")
     target_field = normalize_field(request.form.get("target_field", "")) or ""
     feedback_request = request.form.get("feedback_request", "")
@@ -92,6 +96,9 @@ def edit(resume_id):
         abort(404)
     require_owner(resume["user_id"])
     if request.method == "POST":
+        upload = request.files.get("resume_file")
+        if upload is not None and upload.filename:
+            return review_upload(upload, resume)
         content = request.form.get("resume", "")
         target_field = normalize_field(request.form.get("target_field", "")) or ""
         feedback_request = request.form.get("feedback_request", "")
@@ -209,3 +216,44 @@ def revision(resume_id, revision_id):
     if record is None:
         abort(404)
     return render_template("resume_revision.html", resume=resume, revision=record)
+
+
+UNREADABLE_FILE = "Upload a readable .pdf or .docx file, or paste your resume as text."
+
+
+@bp.post("/resumes/import")
+@bp.post("/resumes/<int:resume_id>/import")
+@login_required
+def import_file(resume_id=None):
+    """Extract into an editable form without saving a résumé or retaining the file."""
+    resume = None
+    if resume_id is not None:
+        resume = database.get_resume_by_id(resume_id)
+        if resume is None:
+            abort(404)
+        require_owner(resume["user_id"])
+    return review_upload(request.files.get("resume_file"), resume)
+
+
+def review_upload(upload, resume=None):
+    """Fill the editable form with imported plain text, or keep the draft on error."""
+    pasted = request.form.get("resume", "")
+    original_format = request.form.get("content_format", "plain")
+    target = request.form.get("target_field", "")
+    feedback = request.form.get("feedback_request", "")
+    if upload is None or not upload.filename:
+        return submission_form(pasted, target, feedback, "Choose a PDF or DOCX file to import.", resume, original_format), 400
+    try:
+        content = extract_upload(upload)
+    except UploadError as error:
+        return submission_form(pasted, target, feedback, str(error), resume, original_format), error.status
+    if content is None:
+        return submission_form(pasted, target, feedback, UNREADABLE_FILE, resume, original_format), 400
+    if not content.strip():
+        return submission_form(pasted, target, feedback,
+            "No readable text was found. Scanned PDFs need text recognition; paste the text or use a text-based PDF/DOCX.", resume, original_format), 400
+    if len(content) > RESUME_LIMIT:
+        return submission_form(pasted, target, feedback,
+            "The extracted résumé exceeds 20,000 characters. Use a shorter document or paste the relevant text.", resume, original_format), 400
+    flash("File imported. Review the extracted text below, remove private details, and submit when ready. Nothing has been saved yet.")
+    return submission_form(content, target, feedback, resume=resume)
