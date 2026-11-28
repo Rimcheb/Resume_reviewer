@@ -1,9 +1,11 @@
 # Display names and résumé ownership (#66, #68)
 
-Users can choose an optional public name during registration and change it on
+Users can choose a required public name during registration and change it on
 Your account. Comments and reviewer profiles display that name; existing users
 without one display as Reviewer until they set it. Names are not unique account
-identifiers or verified identities. Authentication continues to use email and the
+identifiers or verified identities. Comments and profiles also show a stable reviewer
+number so people with the same name can be distinguished. Existing accounts keep
+their names and may update them on Your account. Authentication continues to use email and the
 signed session. Email addresses are never used as public-name fallbacks.
 
 Browse and My Résumés mark the signed-in user's submissions as Your résumé.
@@ -39,3 +41,13 @@ changes made after the backup would need separate recovery.
 Tests cover registration, public name rendering and escaping, private-email
 non-disclosure, owner badges, authenticated name changes, forged user IDs, invalid
 names, CSRF, anonymous access, and a repeatable backed-up version-2 migration.
+
+## Review updates
+
+Registration requires a valid display name and preserves the first email/password
+validation error. Duplicate names remain allowed; public reviewer numbers distinguish
+profiles without exposing email. Ownership uses the shared accent badge. Integrated
+#75, #81 and #96 from the updated base, preserving the dropdown, score threshold,
+exaggeration flags and the shared backed-up model-column migration. The migration
+also detects a missing display_name column when the existing database is already
+version 3 from #96; readiness checks the actual mapped columns.

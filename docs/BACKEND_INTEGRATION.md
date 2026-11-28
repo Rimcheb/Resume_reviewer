@@ -1,10 +1,9 @@
 # Feedback backend integration
 
 This branch combines PR #119's profile/field-preference/alias/revision/reply stack
-with PR #118's upload-review extension. It is a review integration branch, not a
-merge to main or deployment. Integration commit 142ed47 resolves upload-form and
-content-format conflicts. Imported text is explicitly plain; failed imports retain
-the current draft's format. Only confirmed saves create résumé revision snapshots.
+with PR #118's upload-review extension. Imported text opens as an editable
+plain-text draft. Failed imports keep the draft's format. Only confirmed saves
+create résumé revision snapshots.
 
 ## Parser resource boundaries
 
@@ -16,7 +15,8 @@ security sandbox: the child still runs under the service account.
 
 Each web process permits two active parser children and rejects extra imports
 with a retryable busy response. A child has a ten-second wall-clock deadline and
-a five-second CPU limit. Timed-out children are killed and reaped. Linux also caps
+a five-second CPU limit. Timed-out children are killed and reaped. Windows applies
+the CPU limit and a 512 MiB per-process memory limit with a job object. Linux caps
 address space at 512 MiB. Darwin rejects DATA/AS limit changes, so macOS development
 uses CPU/time/input/page/decompression limits without a hard memory cap. Validate
 actual Linux-host limits and aggregate worker counts before deployment.
@@ -29,8 +29,8 @@ and python-docx to 1.2.0; the real-file tests run against those pinned versions.
 
 ## Validation
 
-`python -m unittest discover -s tests -v`: 53 tests pass. This includes every test
-from the integrated branches plus worker timeout/cleanup/capacity/protocol checks,
+Run `python -m unittest discover -s tests -v` for the integrated feature tests,
+worker timeout, cleanup, capacity and protocol checks,
 platform-limit checks, a complete backed-up schema-v2-to-v7 upgrade preserving
 ratings and unknown old comment history, and HTML-to-imported-plain replacement
 with a snapshot created only on confirmed save. No extra schema migration beyond

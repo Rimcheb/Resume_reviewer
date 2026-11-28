@@ -36,8 +36,8 @@ optional parent_id create_comment argument and equivalent grouping/deletion rule
 
 ## Validation
 
-`python -m unittest discover -s tests -v`: 28 tests pass, including six new reply
-tests covering session identity, inherited revision, parent validation, one-level
+Run `python -m unittest discover -s tests -v`. The reply tests cover
+session identity, inherited revisions, parent validation, one-level
 threads, authorship, CSRF, validation retry, deletion/rating behavior, full résumé
 deletion and a repeatable version-5 migration. Local browser verification exercised
 the reply form and posted a fictional reply in its thread.

@@ -37,7 +37,7 @@ def get_resume_by_id(resume_id):
 
 
 def list_resumes(user_id=None, target_field="", limit=10, offset=0, preferred_fields=()):
-    """Return newest first; match literal field substrings after Python lower()."""
+    """List resumes by field, showing preferred fields first and newest first within each group."""
     return current_app.extensions["storage"].list_resumes(user_id, target_field, limit, offset, preferred_fields)
 
 
@@ -69,6 +69,11 @@ def delete_resume(resume_id):
 def update_comment(comment_id, content):
     """Update validated text after an authorship check; return False if missing."""
     return current_app.extensions["storage"].update_comment(comment_id, content)
+
+
+def flag_exaggeration(comment_id, flagged):
+    """Set (1) or clear (0) the owner's exaggeration flag after permission checks."""
+    return current_app.extensions["storage"].flag_exaggeration(comment_id, flagged)
 
 
 def delete_comment(comment_id):

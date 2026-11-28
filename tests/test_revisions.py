@@ -34,7 +34,7 @@ class RevisionTests(unittest.TestCase):
             comment = database.list_comments(self.resume['id'])[-1]
             self.assertEqual(comment['revision_id'], viewed)
         page = self.client.get(f'/resumes/{self.resume["id"]}').get_data(as_text=True)
-        self.assertIn('Résumé edited since this comment.', page)
+        self.assertIn('This feedback refers to an earlier version.', page)
         old = self.client.get(f'/resumes/{self.resume["id"]}/revisions/{viewed}').get_data(as_text=True)
         self.assertIn('Resume text', old)
         self.assertNotIn('Changed résumé', old)
@@ -99,6 +99,9 @@ class RevisionTests(unittest.TestCase):
             self.assertIsNone(database.list_comments(self.resume['id'])[0]['revision_id'])
             self.assertFalse(upgrade_db(Path(self.temp.name) / 'unused.sqlite'))
             self.assertEqual(sqlite_storage.get_db().scalar(select(func.count()).select_from(ResumeRevision)), 1)
+        with closing(sqlite3.connect(self.path)) as conn:
+            references = [(row[3], row[2], row[4]) for row in conn.execute('PRAGMA foreign_key_list(comments)')]
+            self.assertIn(('revision_id', 'resume_revisions', 'id'), references)
         with closing(sqlite3.connect(backup)) as conn:
             self.assertNotIn('resume_revisions', [r[0] for r in conn.execute("SELECT name FROM sqlite_master WHERE type='table'")])
 

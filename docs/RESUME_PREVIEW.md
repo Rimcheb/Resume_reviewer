@@ -3,7 +3,8 @@
 Submission and edit forms offer Preview résumé. The preview uses the same
 resume_content renderer and shared document styles as the saved detail/history
 pages. It shows a clear Preview only — not published notice, keeps the editable
-form and its role/feedback/format values, and offers preview-again or final save.
+form and its role/feedback/format values. Back to editing focuses the résumé text
+on the same page. Users can preview again before selecting Submit or Save changes.
 Plain text stays escaped. When the separately gated Quill integration is enabled,
 HTML is sanitized using the same allowlist as final submission.
 
@@ -21,7 +22,7 @@ plain-text newlines and consistent document spacing instead of collapsing them.
 ## Dependencies and validation
 
 Draft PR stacked on the combined backend integration (PR #120). No new migration
-beyond schema 7. All 59 tests pass, including six new preview tests for preserved
+beyond schema 7. The six tests in `tests/test_preview.py` cover preserved
 state, plain/HTML rendering, final-render parity, owner permissions, feature flag,
 validation/CSRF/authentication, file import and no-save/no-revision behavior.
 

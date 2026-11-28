@@ -1,6 +1,7 @@
 from io import BytesIO
 import json
 import subprocess
+import sys
 import unittest
 from unittest.mock import Mock, patch
 from werkzeug.datastructures import FileStorage
@@ -24,6 +25,24 @@ class UploadIsolationTests(unittest.TestCase):
         with patch('backend.uploads.subprocess.Popen', return_value=success):
             self.assertEqual(extract_upload(self.upload()), 'Text')
 
+    def test_real_timeout_targets_the_running_interpreter(self):
+        launch = subprocess.Popen
+        workers = []
+
+        def start_slow_worker(args, **options):
+            probe = 'import os, time; print(os.getpid(), flush=True); time.sleep(5)'
+            worker = launch([args[0], '-c', probe], **options)
+            workers.append((worker, int(worker.stdout.readline())))
+            return worker
+
+        with patch('backend.uploads.subprocess.Popen', side_effect=start_slow_worker), \
+             patch('backend.uploads.PARSE_TIMEOUT_SECONDS', 0.05):
+            with self.assertRaisesRegex(UploadError, 'too long'):
+                extract_upload(self.upload())
+        worker, reported_pid = workers[0]
+        self.assertEqual(worker.pid, reported_pid)
+        self.assertIsNotNone(worker.returncode)
+
     def test_worker_has_no_app_credentials_or_original_filename(self):
         process = Mock(returncode=0)
         process.communicate.return_value = (json.dumps('Safe text').encode(), None)
@@ -32,7 +51,13 @@ class UploadIsolationTests(unittest.TestCase):
         args, options = launch.call_args
         self.assertEqual(args[0][-1], '.pdf')
         self.assertNotIn('private-name.pdf', args[0])
-        self.assertEqual(set(options['env']), {'PYTHONIOENCODING', 'LANG'})
+        expected_keys = {'PYTHONIOENCODING', 'LANG'}
+        if sys.platform == 'win32':
+            expected_keys.update(('SystemRoot', 'SystemDrive'))
+        if sys.platform == 'win32' and sys.prefix != sys.base_prefix:
+            expected_keys.add('__PYVENV_LAUNCHER__')
+            self.assertEqual(options['env']['__PYVENV_LAUNCHER__'], sys.executable)
+        self.assertEqual(set(options['env']), expected_keys)
         self.assertEqual(process.communicate.call_args.kwargs['timeout'], 10)
 
     def test_worker_crash_bad_output_and_unavailable_worker_are_recoverable(self):
@@ -55,6 +80,7 @@ class UploadIsolationTests(unittest.TestCase):
             launch.assert_not_called()
             slots.release.assert_not_called()
 
+    @unittest.skipIf(sys.platform == "win32", "POSIX resource limits")
     def test_platform_limits_apply_cpu_and_linux_memory_cap(self):
         import resource
         from backend.upload_parser import apply_limits
@@ -66,3 +92,17 @@ class UploadIsolationTests(unittest.TestCase):
                     setter.assert_any_call(resource.RLIMIT_AS, (512*1024*1024, 512*1024*1024))
                 else:
                     self.assertEqual(setter.call_count, 1)
+
+    @unittest.skipUnless(sys.platform == "win32", "Windows job object limits")
+    def test_windows_worker_has_cpu_and_memory_limits(self):
+        probe = """
+import json
+import win32job
+from backend.upload_parser import apply_limits
+apply_limits()
+limits = win32job.QueryInformationJobObject(None, win32job.JobObjectExtendedLimitInformation)
+basic = limits['BasicLimitInformation']
+print(json.dumps([basic['PerProcessUserTimeLimit'], limits['ProcessMemoryLimit']]))
+"""
+        output = subprocess.check_output([sys.executable, "-c", probe])
+        self.assertEqual(json.loads(output), [5 * 10_000_000, 512 * 1024 * 1024])

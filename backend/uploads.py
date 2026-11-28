@@ -1,6 +1,7 @@
 """Run untrusted document extraction outside the web process with bounded lifetime."""
 
 import json
+import os
 from pathlib import Path
 import subprocess
 import sys
@@ -31,11 +32,21 @@ def extract_upload(upload):
     if not _PARSER_SLOTS.acquire(blocking=False):
         raise UploadError('File import is busy. Try again shortly or paste your résumé text.', 503)
     try:
+        python = sys.executable
+        env = {'PYTHONIOENCODING': 'utf-8', 'LANG': 'C.UTF-8'}
+        if sys.platform == 'win32':
+            # Windows needs these paths to locate its runtime and system caches.
+            env['SystemRoot'] = os.environ['SystemRoot']
+            env['SystemDrive'] = os.environ['SystemDrive']
+        if sys.platform == 'win32' and sys.prefix != sys.base_prefix:
+            # Target the worker itself on timeout. Windows venvs otherwise start a launcher process.
+            python = sys._base_executable
+            env['__PYVENV_LAUNCHER__'] = sys.executable
         try:
             process = subprocess.Popen(
-                [sys.executable, '-m', 'backend.upload_parser', suffix],
+                [python, '-m', 'backend.upload_parser', suffix],
                 cwd=Path(__file__).resolve().parent.parent,
-                env={'PYTHONIOENCODING': 'utf-8', 'LANG': 'C.UTF-8'},
+                env=env,
                 stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL,
             )
         except OSError as error:
