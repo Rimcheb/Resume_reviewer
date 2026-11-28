@@ -2,7 +2,7 @@
 
 import os
 from datetime import datetime
-from flask import Flask, render_template, request
+from flask import Flask, abort, render_template, request
 from flask_wtf.csrf import CSRFError, CSRFProtect
 
 from backend import auth, comments, database, resumes, ratings, sqlite_storage
@@ -13,8 +13,7 @@ def csrf_error(error):
     return render_template("error.html", message="Please reload the form and try again."), 400
 
 
-UPLOAD_LIMIT = 2 * 1024 * 1024
-UPLOAD_ENDPOINTS = ("resumes.create", "resumes.edit")
+UPLOAD_ENDPOINTS = ("resumes.create", "resumes.edit", "resumes.import_file")
 
 
 def allow_uploads():
@@ -23,7 +22,9 @@ def allow_uploads():
     Registered before CSRFProtect, whose own hook reads the form before any view runs.
     """
     if request.endpoint in UPLOAD_ENDPOINTS:
-        request.max_content_length = UPLOAD_LIMIT
+        request.max_content_length = resumes.MAX_UPLOAD_BYTES + 64 * 1024  # Allow for the rest of the form.
+        if request.content_length is not None and request.content_length > request.max_content_length:
+            abort(413)
 
 
 def too_large(error):

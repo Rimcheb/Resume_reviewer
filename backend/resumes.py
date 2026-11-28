@@ -4,6 +4,8 @@ from io import BytesIO
 import zipfile
 
 from docx import Document
+from docx.table import Table
+from docx.text.paragraph import Paragraph
 from flask import Blueprint, abort, flash, g, redirect, render_template, request, url_for
 from pypdf import PdfReader
 
@@ -32,6 +34,7 @@ def submission_error(content, target_field, feedback_request):
     return None
 
 
+MAX_UPLOAD_BYTES = 2 * 1024 * 1024
 MAX_PDF_PAGES = 10
 MAX_DOCX_UNZIPPED = 10 * 1024 * 1024
 MAX_PAGE_CONTENT = 1024 * 1024  # a text-heavy resume page is well under 100 KB
@@ -39,10 +42,17 @@ MAX_PAGE_CONTENT = 1024 * 1024  # a text-heavy resume page is well under 100 KB
 
 def file_text(upload):
     """Extract plain text, checking page and unpacked-size limits before parsing."""
-    data = BytesIO(upload.read())
+    raw = upload.read(MAX_UPLOAD_BYTES + 1)
+    if not raw or len(raw) > MAX_UPLOAD_BYTES:
+        return None
+    data = BytesIO(raw)
     name = upload.filename.lower()
     if name.endswith(".pdf"):
+        if not raw.startswith(b"%PDF-"):
+            return None
         reader = PdfReader(data)
+        if reader.is_encrypted:
+            return None
         if len(reader.pages) > MAX_PDF_PAGES:
             return None
         text = ""
@@ -52,28 +62,36 @@ def file_text(upload):
                 return None
             text += (page.extract_text() or "") + "\n"
             if len(text.strip()) > RESUME_LIMIT:
-                break  # already too long; submission_error reports it
+                break  # The import form reports the length error.
         return text.strip()
     if name.endswith(".docx"):
         with zipfile.ZipFile(data) as archive:
             if sum(entry.file_size for entry in archive.infolist()) > MAX_DOCX_UNZIPPED:
                 return None
-        return "\n".join(paragraph.text for paragraph in Document(data).paragraphs).strip()
+            if "word/document.xml" not in archive.namelist():
+                return None
+        data.seek(0)
+        parts = []
+        text_length = 0
+        for block in Document(data).iter_inner_content():
+            before = len(parts)
+            if isinstance(block, Paragraph):
+                parts.append(block.text)
+            elif isinstance(block, Table):
+                for row in block.rows:
+                    seen = set()
+                    cells = []
+                    for cell in row.cells:
+                        if cell._tc not in seen:
+                            seen.add(cell._tc)
+                            cells.append(cell.text)
+                    parts.append("\t".join(cells))
+            # Stop early only if the text exceeds the limit even without separators.
+            text_length += sum(len(part.strip()) for part in parts[before:])
+            if text_length > RESUME_LIMIT:
+                break
+        return "\n".join(parts).strip()
     return None
-
-
-def submitted_content():
-    """Use an uploaded file when one was chosen, else the pasted text; None if unreadable.
-
-    The file is only read in memory. Only the extracted text is saved, never the file.
-    """
-    upload = request.files.get("resume_file")
-    if upload is None or not upload.filename:
-        return request.form.get("resume", "")
-    try:
-        return file_text(upload)
-    except Exception:  # pypdf and python-docx raise many error types for corrupt or encrypted files
-        return None
 
 
 UNREADABLE_FILE = "Upload a readable .pdf or .docx file, or paste your resume as text."
@@ -99,11 +117,12 @@ def new():
 @login_required
 def create():
     """Save text under the signed-in user's ID and open its detail page."""
-    content = submitted_content()
+    upload = request.files.get("resume_file")
+    if upload is not None and upload.filename:
+        return review_upload(upload)
+    content = request.form.get("resume", "")
     target_field = request.form.get("target_field", "")
     feedback_request = request.form.get("feedback_request", "")
-    if content is None:
-        return submission_form(request.form.get("resume", ""), target_field, feedback_request, UNREADABLE_FILE), 400
     error = submission_error(content, target_field, feedback_request)
     if error is not None:
         return submission_form(content, target_field, feedback_request, error), 400
@@ -135,11 +154,12 @@ def edit(resume_id):
         abort(404)
     require_owner(resume["user_id"])
     if request.method == "POST":
-        content = submitted_content()
+        upload = request.files.get("resume_file")
+        if upload is not None and upload.filename:
+            return review_upload(upload, resume)
+        content = request.form.get("resume", "")
         target_field = request.form.get("target_field", "")
         feedback_request = request.form.get("feedback_request", "")
-        if content is None:
-            return submission_form(request.form.get("resume", ""), target_field, feedback_request, UNREADABLE_FILE, resume), 400
         error = submission_error(content, target_field, feedback_request)
         if error is not None:
             return submission_form(content, target_field, feedback_request, error, resume), 400
@@ -202,3 +222,40 @@ def feed():
 def mine():
     """Show only submissions owned by the signed-in user."""
     return resume_list(g.user["id"])
+
+
+@bp.post("/resumes/import")
+@bp.post("/resumes/<int:resume_id>/import")
+@login_required
+def import_file(resume_id=None):
+    """Extract into an editable form without saving a résumé or retaining the file."""
+    resume = None
+    if resume_id is not None:
+        resume = database.get_resume_by_id(resume_id)
+        if resume is None:
+            abort(404)
+        require_owner(resume["user_id"])
+    return review_upload(request.files.get("resume_file"), resume)
+
+
+def review_upload(upload, resume=None):
+    """Fill the editable form with imported text, or keep the draft on error."""
+    pasted = request.form.get("resume", "")
+    target = request.form.get("target_field", "")
+    feedback = request.form.get("feedback_request", "")
+    if upload is None or not upload.filename:
+        return submission_form(pasted, target, feedback, "Choose a PDF or DOCX file to import.", resume), 400
+    try:
+        content = file_text(upload)
+    except Exception:  # Both parsers raise several kinds of errors for unreadable files.
+        content = None
+    if content is None:
+        return submission_form(pasted, target, feedback, UNREADABLE_FILE, resume), 400
+    if not content.strip():
+        return submission_form(pasted, target, feedback,
+            "No readable text was found. Scanned PDFs need text recognition; paste the text or use a text-based PDF/DOCX.", resume), 400
+    if len(content) > RESUME_LIMIT:
+        return submission_form(pasted, target, feedback,
+            "The extracted résumé exceeds 20,000 characters. Use a shorter document or paste the relevant text.", resume), 400
+    flash("File imported. Review the extracted text below, remove private details, and submit when ready. Nothing has been saved yet.")
+    return submission_form(content, target, feedback, resume=resume)
