@@ -15,7 +15,7 @@ def csrf_error(error):
     return render_template("error.html", message="Please reload the form and try again."), 400
 
 
-UPLOAD_ENDPOINTS = ("resumes.create", "resumes.edit", "resumes.import_file")
+UPLOAD_ENDPOINTS = ("resumes.create", "resumes.edit", "resumes.import_file", "resumes.preview")
 
 
 def allow_uploads():

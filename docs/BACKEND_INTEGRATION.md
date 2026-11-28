@@ -42,7 +42,8 @@ version 7 is introduced by this integration.
   by default. Use docs/RICH_TEXT_CONTRACT.md.
 - Draft protection (#107) can initially be frontend-only. Cross-device drafts need
   a separate agreed persistence scope; no server draft store is introduced here.
-- Preview (#108) is the next small PR, reusing the current safe renderer.
+- Preview (#108) is implemented in this follow-up branch, reusing the current safe
+  renderer; see docs/RESUME_PREVIEW.md.
 - Review and merge dependency PRs in order; reconcile the parallel upload branch
   before retargeting this integration. Keep issues open until their requirements
   are merged and verified.

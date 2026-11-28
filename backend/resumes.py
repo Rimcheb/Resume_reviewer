@@ -32,13 +32,13 @@ def submission_error(content, target_field, feedback_request, content_format="pl
     return None
 
 
-def submission_form(content="", target_field="", feedback_request="", error=None, resume=None, content_format="plain"):
+def submission_form(content="", target_field="", feedback_request="", error=None, resume=None, content_format="plain", preview=False):
     """Keep form values and limits together for initial display and errors."""
     return render_template(
         "submit_resume.html", content=content, target_field=normalize_field(target_field) or target_field,
         feedback_request=feedback_request, error=error, resume=resume, content_format=content_format,
         resume_limit=RESUME_LIMIT, fields=FIELDS, feedback_limit=FEEDBACK_LIMIT,
-        html_limit=HTML_LIMIT,
+        html_limit=HTML_LIMIT, preview=preview,
     )
 
 
@@ -257,3 +257,32 @@ def review_upload(upload, resume=None):
             "The extracted résumé exceeds 20,000 characters. Use a shorter document or paste the relevant text.", resume, original_format), 400
     flash("File imported. Review the extracted text below, remove private details, and submit when ready. Nothing has been saved yet.")
     return submission_form(content, target, feedback, resume=resume)
+
+
+@bp.post("/resumes/preview")
+@bp.post("/resumes/<int:resume_id>/preview")
+@login_required
+def preview(resume_id=None):
+    """Render the same safe content as detail, preserving form state without writes."""
+    resume = None
+    if resume_id is not None:
+        resume = database.get_resume_by_id(resume_id)
+        if resume is None:
+            abort(404)
+        require_owner(resume["user_id"])
+    upload = request.files.get("resume_file")
+    if upload is not None and upload.filename:
+        return review_upload(upload, resume)
+    content = request.form.get("resume", "")
+    content_format = request.form.get("content_format", "plain")
+    target = normalize_field(request.form.get("target_field", "")) or ""
+    feedback = request.form.get("feedback_request", "")
+    try:
+        clean_content = submitted_content(content, content_format)
+    except ValueError as error:
+        return submission_form(content, target, feedback, str(error), resume, content_format), 400
+    error = submission_error(clean_content, target, feedback, content_format)
+    if error is not None:
+        return submission_form(content, target, feedback, error, resume, content_format), 400
+    return submission_form(clean_content, target, feedback, resume=resume,
+                           content_format=content_format, preview=True)
